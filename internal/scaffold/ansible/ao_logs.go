@@ -35,18 +35,20 @@ func (a *AoLogs) GetInput() (input.Input, error) {
 	return a.Input, nil
 }
 
-//TODO: Change this implementation for no longer use inotifywait.
-// More Info: https://github.com/operator-framework/operator-sdk/issues/2007
 const aoLogsTmpl = `#!/bin/bash
 
 watch_dir=${1:-/tmp/ansible-operator/runner}
 filename=${2:-stdout}
 mkdir -p ${watch_dir}
-inotifywait -r -m -e close_write ${watch_dir} | while read dir op file
-do
-  if [[ "${file}" = "${filename}" ]] ; then
-    echo "${dir}/${file}"
-    cat ${dir}/${file}
-  fi
+
+while true; do
+  watch -d -g ls -lR ${watch_dir} | while read dir op file
+	do
+	  if [[ "${file}" = "${filename}" ]] ; then
+		echo "${dir}/${file}"
+		cat ${dir}/${file}
+	  fi
+	done
+  sleep 1     # to allow break script by Ctrl+c
 done
 `

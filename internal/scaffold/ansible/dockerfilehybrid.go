@@ -65,9 +65,6 @@ ENV OPERATOR=/usr/local/bin/ansible-operator \
 RUN yum clean all && rm -rf /var/cache/yum/* \
  && yum -y update \
  && yum install -y libffi-devel openssl-devel python36-devel gcc python3-pip python3-setuptools \
- # todo: remove inotify-tools. More info: See https://github.com/operator-framework/operator-sdk/issues/2007
- && FEDORA=$(case $(arch) in ppc64le|s390x) echo -n fedora-secondary ;; *) echo -n fedora/linux ;; esac) \
- && yum install -y https://dl.fedoraproject.org/pub/$FEDORA/releases/30/Everything/$(arch)/os/Packages/i/inotify-tools-3.14-16.fc30.$(arch).rpm \
  && pip3 install --no-cache-dir --ignore-installed ipaddress \
       ansible-runner==1.3.4 \
       ansible-runner-http==1.0.0 \
