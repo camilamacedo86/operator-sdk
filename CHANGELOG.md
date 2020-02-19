@@ -22,6 +22,7 @@
 ### Deprecated
 
 ### Removed
+- Remove the usage of `inotify-tools` from Ansible base-operator image.([#2580](https://github.com/operator-framework/operator-sdk/pull/2580))
 
 ### Bug Fixes
 
