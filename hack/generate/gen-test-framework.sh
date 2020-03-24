@@ -16,7 +16,6 @@ echo "$(../../build/operator-sdk print-deps)" > go.mod
 sed -i".bak" -E -e "/github.com\/operator-framework\/operator-sdk .+/d" go.mod; rm -f go.mod.bak
 echo -e "\nreplace github.com/operator-framework/operator-sdk => ../../" >> go.mod
 go mod edit -require "github.com/operator-framework/operator-sdk@v0.0.0"
-go build ./...
 go mod tidy
 
 # Run gen commands

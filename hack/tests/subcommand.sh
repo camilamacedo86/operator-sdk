@@ -52,4 +52,24 @@ kubectl create -f deploy/role_binding.yaml --namespace test-memcached
 kubectl create -f deploy/operator.yaml --namespace test-memcached
 operator-sdk test local ./test/e2e --operator-namespace=test-memcached --no-setup
 kubectl delete namespace test-memcached
+
+# check SDK CRD's generated with controller-gen
+make manifests
+
+kubectl delete --wait=true --ignore-not-found=true deploy/crds-gen/cache.example.com_dummys.yaml
+kubectl create -f deploy/crds-gen/cache.example.com_dummys.yaml
+trap_add 'kubectl delete -f test/test-framework/deploy/crds-gen/cache.example.com_dummys.yaml' EXIT
+
+kubectl delete --wait=true --ignore-not-found=true deploy/crds-gen/cache.example.com_memcachedrs.yaml
+kubectl create -f deploy/crds-gen/cache.example.com_memcachedrs.yaml
+trap_add 'kubectl delete -f test/test-framework/deploy/crds-gen/cache.example.com_memcachedrs.yaml' EXIT
+
+kubectl delete --wait=true --ignore-not-found=true deploy/crds-gen/cache.example.com_memcacheds.yaml
+kubectl create -f deploy/crds-gen/cache.example.com_memcacheds.yaml
+trap_add 'kubectl delete -f test/test-framework/deploy/crds-gen/cache.example.com_memcacheds.yaml' EXIT
+
+kubectl delete --wait=true --ignore-not-found=true deploy/crds-gen/cache.example.com_otherdummies.yaml
+kubectl create -f deploy/crds-gen/cache.example.com_otherdummies.yaml
+trap_add 'kubectl delete -f test/test-framework/deploy/crds-gen/cache.example.com_otherdummies.yaml' EXIT
+
 popd

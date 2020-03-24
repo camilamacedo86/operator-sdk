@@ -5,6 +5,7 @@
 package v1alpha1
 
 import (
+	status "github.com/operator-framework/operator-sdk/pkg/status"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -190,6 +191,13 @@ func (in *MemcachedStatus) DeepCopyInto(out *MemcachedStatus) {
 		in, out := &in.Nodes, &out.Nodes
 		*out = make([]string, len(*in))
 		copy(*out, *in)
+	}
+	if in.Conditions != nil {
+		in, out := &in.Conditions, &out.Conditions
+		*out = make(status.Conditions, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 	return
 }
