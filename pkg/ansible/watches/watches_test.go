@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/operator-framework/operator-sdk/internal/util/projutil"
-
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/operator-framework/operator-sdk/internal/util/projutil"
 )
 
 func TestNew(t *testing.T) {
@@ -51,7 +51,7 @@ func TestNew(t *testing.T) {
 			shouldValidate: false,
 		},
 	}
-	expectedReconcilePeriod, _ := time.ParseDuration(reconcilePeriodDefault)
+	expectedReconcilePeriod, _ := time.ParseDuration(reconcilePeriodDefault.String())
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
