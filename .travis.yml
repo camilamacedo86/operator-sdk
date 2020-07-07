@@ -149,6 +149,12 @@ jobs:
       name: Helm on Kubernetes
       script: make test-e2e-helm
 
+    # Build and test helm new layout
+    # todo(camilamacedo86): remove it
+    - <<: *test
+      name: Helm on Kubernetes (shell deprecated)
+      script: make test-e2e-helm-new-shell
+
     ## Image deploy/push stage jobs ##
 
     # Build and deploy arm64 ansible-operator docker image
