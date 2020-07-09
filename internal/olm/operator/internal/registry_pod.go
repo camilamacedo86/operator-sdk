@@ -19,7 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
+	"path/filepath"
 	"text/template"
 	"time"
 
@@ -28,13 +28,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/cluster-api/util/container"
 )
 
 const (
 	defaultIndexImage        = "quay.io/operator-framework/upstream-opm-builder:latest"
-	defaultGRPCPort          = 50051
 	defaultContainerName     = "registry-grpc"
 	defaultContainerPortName = "grpc"
+	defaultGRPCPort          = 50051
 )
 
 // RegistryPod holds resources necessary for creation of a registry server
@@ -59,23 +60,31 @@ type RegistryPod struct {
 	// Kubeclient refers to a Kubernetes clientset that implements kubernetes.Interface.
 	Kubeclient kubernetes.Interface
 
-	// grpcPort is the container grpc port which is defaulted to 50051
-	grpcPort int32
+	// GRPCPort is the container grpc port which is defaulted to 50051
+	GRPCPort int32
 }
 
 // Create returns a bundle registry pod built from an index image after verifying successful creation
-func (rp *RegistryPod) Create(ctx context.Context) (*corev1.Pod, error) {
+func (rp *RegistryPod) Create(ctx context.Context) (*corev1.Pod, string, error) {
 	pod, err := rp.create(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error verifying pod creation: %v", err)
+		podLogs, logErr := rp.FetchPodLogs(ctx, pod)
+		if logErr != nil {
+			return nil, podLogs, fmt.Errorf("error creating pod: %v: and fetching logs: %v", err, logErr)
+		}
+		return nil, podLogs, fmt.Errorf("error creating pod: %v", err)
 	}
 
-	err = rp.verifyPodCreation(ctx, pod)
+	err = rp.verifyPodRunning(ctx, pod)
 	if err != nil {
-		return nil, fmt.Errorf("error verifying pod creation: %v", err)
+		podLogs, logErr := rp.FetchPodLogs(ctx, pod)
+		if logErr != nil {
+			return nil, podLogs, fmt.Errorf("error verifying pod creation: %v: and fetching logs: %v", err, logErr)
+		}
+		return nil, podLogs, fmt.Errorf("error verifying pod creation: %v", err)
 	}
 
-	return pod, nil
+	return pod, "", nil
 }
 
 // create returns a pod built from an index image or returns if an existing pod with the same name is found
@@ -111,24 +120,19 @@ func (rp *RegistryPod) create(ctx context.Context) (*corev1.Pod, error) {
 	return pod, nil
 }
 
-func (rp *RegistryPod) verifyPodCreation(ctx context.Context, pod *corev1.Pod) error {
+func (rp *RegistryPod) verifyPodRunning(ctx context.Context, pod *corev1.Pod) error {
 	// Upon creation of new pod, poll and verify that pod status is running
 	podCheck := wait.ConditionFunc(func() (done bool, err error) {
 		p, err := rp.Kubeclient.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 		if err != nil {
-			return true, fmt.Errorf("error getting pod %s: %w", pod.Name, err)
+			return false, fmt.Errorf("error getting pod %s: %w", pod.Name, err)
 		}
 		return p.Status.Phase == corev1.PodRunning, nil
 	})
 
-	err := wait.PollImmediateUntil(time.Duration(1*time.Second), podCheck, ctx.Done())
+	err := wait.PollImmediateUntil(time.Duration(200*time.Millisecond), podCheck, ctx.Done())
 	if err != nil {
 		return fmt.Errorf("error waiting for registry pod %s to run: %v", pod.Name, err)
-	}
-
-	_, err = rp.fetchPodLogs(ctx, pod)
-	if err != nil {
-		return fmt.Errorf("error in fetching pod logs: %v", err)
 	}
 
 	return err
@@ -144,8 +148,9 @@ func (rp *RegistryPod) init() error {
 }
 
 func (rp *RegistryPod) setDefaults() {
-	// set the grpcPort to default 50051
-	rp.grpcPort = defaultGRPCPort
+	if rp.GRPCPort == 0 {
+		rp.GRPCPort = defaultGRPCPort
+	}
 
 	if len(rp.IndexImage) == 0 {
 		rp.IndexImage = defaultIndexImage
@@ -172,22 +177,21 @@ func (rp *RegistryPod) validate() error {
 		return errors.New("pod namespace is required")
 	}
 
+	if len(rp.BundleAddMode) == 0 {
+		panic("bundle add mode is not set")
+	}
+
 	return nil
 }
 
 // getPodName will return a string constructed from the bundle Image name
-func getPodName(bundleName string) (string, error) {
-	var podName string
-	if strings.Contains(bundleName, "/") {
-		split := strings.Split(bundleName, "/")
-		lastSegment := strings.Split(split[len(split)-1:][0], ":")
-		// get the last but one element from last segment excluding
-		// the version number and append index
-		podName = lastSegment[len(lastSegment)-2] + "-index"
-	} else {
-		return "", fmt.Errorf("invalid bundle image name: %s", bundleName)
+func getPodName(bundleImage string) (string, error) {
+	image, err := container.ImageFromString(bundleImage)
+	if err != nil {
+		return "", fmt.Errorf("invalid bundle image name: %s", bundleImage)
 	}
-	return podName, nil
+
+	return image.Name + "-index", nil
 }
 
 // build sets the defaults and validates the RegistryPod struct, and returns a pod definition
@@ -218,7 +222,7 @@ func (rp *RegistryPod) build() (*corev1.Pod, error) {
 						containerCmd,
 					},
 					Ports: []corev1.ContainerPort{
-						{Name: defaultContainerPortName, ContainerPort: rp.grpcPort},
+						{Name: defaultContainerPortName, ContainerPort: rp.GRPCPort},
 					},
 				},
 			},
@@ -229,37 +233,35 @@ func (rp *RegistryPod) build() (*corev1.Pod, error) {
 }
 
 func (rp *RegistryPod) getContainerCmd() (string, error) {
-	const containerCommand = `
-/bin/mkdir -p /database && 
-/bin/opm registry add -d {{.DBPath}} -b {{.BundleImage}} --mode={{.BundleAddMode}} &&
-/bin/opm registry serve -d {{.DBPath}}
-`
+	const containerCommand = `/bin/mkdir -p {{ .DBPath | basename }} &&  /bin/opm registry add -d {{ .DBPath | basename }} -b {{.BundleImage}} --mode={{.BundleAddMode}} && /bin/opm registry serve -d {{ .DBPath | basename }} -p {{.GRPCPort}}`
 	type bundleCmd struct {
 		BundleImage, DBPath, BundleAddMode string
+		GRPCPort                           int32
 	}
 
-	var cmds = []bundleCmd{
-		{rp.BundleImage, rp.DBPath, rp.BundleAddMode},
-	}
+	var command = bundleCmd{rp.BundleImage, rp.DBPath, rp.BundleAddMode, rp.GRPCPort}
 
 	out := &bytes.Buffer{}
 
-	// Create a new template and parse the containerCommand into it
-	tmpl := template.Must(template.New("containerCommand").Parse(containerCommand))
+	// create a custom basename template function
+	funcMap := template.FuncMap{
+		"basename": filepath.Base,
+	}
 
-	// Execute the template
-	for _, cmd := range cmds {
-		err := tmpl.Execute(out, cmd)
-		if err != nil {
-			return "", fmt.Errorf("error in parsing container command: %w", err)
-		}
+	// add the custom basename template function to the
+	// template's FuncMap and parse the containerCommand
+	tmp := template.Must(template.New("containerCommand").Funcs(funcMap).Parse(containerCommand))
+
+	err := tmp.Execute(out, command)
+	if err != nil {
+		return "", fmt.Errorf("error in parsing container command: %w", err)
 	}
 
 	return out.String(), nil
 }
 
-// fetchPodLogs gets the logs from the registry pod
-func (rp *RegistryPod) fetchPodLogs(ctx context.Context, pod *corev1.Pod) (string, error) {
+// FetchPodLogs gets the logs from the registry pod
+func (rp *RegistryPod) FetchPodLogs(ctx context.Context, pod *corev1.Pod) (string, error) {
 	req := rp.Kubeclient.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{})
 	podLogs, err := req.Stream(ctx)
 	if err != nil {

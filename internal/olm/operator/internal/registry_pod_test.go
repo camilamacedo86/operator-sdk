@@ -19,8 +19,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -30,80 +28,101 @@ func newFakeClient() kubernetes.Interface {
 	return fake.NewSimpleClientset()
 }
 
-func TestCreatePod(t *testing.T) {
+func TestCreateRegistryPod(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test registry pod")
+	RunSpecs(t, "Test Registry Pod Suite")
 }
 
-var _ = Describe("Creation", func() {
-	rp := &RegistryPod{
-		Kubeclient:  newFakeClient(),
-		DBPath:      "/database/index.db",
-		BundleImage: "quay.io/joelanford/example-operator-bundle:0.2.0",
-		Namespace:   "default",
-	}
+var _ = Describe("RegistryPod", func() {
+	var rp *RegistryPod
 
-	It("validate registry pod", func() {
-		err := rp.validate()
+	BeforeEach(func() {
+		rp = &RegistryPod{
+			Kubeclient:  newFakeClient(),
+			DBPath:      "/database/index.db",
+			BundleImage: "quay.io/joelanford/example-operator-bundle:0.2.0",
+			Namespace:   "default",
+			GRPCPort:    50051,
+		}
 
-		Expect(err).To(BeNil())
+		rp.setDefaults()
+
 	})
 
-	It("create pod", func() {
-		pod, err := rp.Kubeclient.CoreV1().Pods("default").Create(context.Background(),
-			&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod"}}, metav1.CreateOptions{})
+	Describe("creating registry pod", func() {
 
-		Expect(err).To(BeNil())
-		Expect(pod.Name).To(Equal("test-pod"))
-	})
+		Context("with valid registry pod values", func() {
+			var (
+				expectedPodName, expectedOutput string
+			)
 
-	It("get pod name", func() {
-		podName, err := getPodName(rp.BundleImage)
-		expectedPodName := "example-operator-bundle-index"
+			BeforeEach(func() {
+				expectedPodName = "example-operator-bundle-index"
+				expectedOutput = "/bin/mkdir -p index.db &&  /bin/opm registry add -d index.db -b quay.io/joelanford/example-operator-bundle:0.2.0 --mode=semver && /bin/opm registry serve -d index.db -p 50051"
+			})
 
-		Expect(err).To(BeNil())
-		Expect(podName).To(Equal(expectedPodName))
-	})
+			It("should successfully validate pod", func() {
+				err := rp.validate()
 
-	It("valid bundle image name", func() {
-		_, err := rp.build()
+				Expect(err).To(BeNil())
+			})
 
-		Expect(err).To(BeNil())
-	})
+			It("should construct the pod name from the bundle name successfully", func() {
+				podName, err := getPodName(rp.BundleImage)
 
-	It("invalid bundle image name", func() {
-		rp.BundleImage = "invalid-image"
-		expectedErr := "invalid bundle image name"
+				Expect(err).To(BeNil())
+				Expect(podName).To(Equal(expectedPodName))
+			})
 
-		_, err := rp.build()
+			It("should build the pod definition successfully with a valid registry pod", func() {
+				pod, err := rp.build()
 
-		Expect(err).NotTo(BeNil())
-		Expect(err.Error()).Should(ContainSubstring(expectedErr))
-	})
+				Expect(err).To(BeNil())
+				Expect(pod.Name).To(Equal(expectedPodName))
+				Expect(pod.Namespace).To(Equal(rp.Namespace))
+				Expect(pod.Spec.Containers[0].Name).To(Equal(defaultContainerName))
+				Expect(pod.Spec.Containers[0].Ports[0].ContainerPort).To(Equal(rp.GRPCPort))
+			})
 
-	It("get container command - valid", func() {
-		rp.BundleImage = "quay.io/joelanford/example-operator-bundle:0.2.0"
-		output, err := rp.getContainerCmd()
+			It("should return a valid container command", func() {
+				output, err := rp.getContainerCmd()
 
-		Expect(err).To(BeNil())
-		Expect(output).Should(ContainSubstring(rp.BundleImage))
-	})
+				Expect(err).To(BeNil())
+				Expect(output).Should(Equal(expectedOutput))
+			})
 
-	It("create registry pod", func() {
-		rp.BundleImage = "quay.io/joelanford/example-operator-bundle:0.2.0"
-		exepectedPodName := "example-operator-bundle-index"
+			It("should successfully create registry pod without any errors", func() {
+				pod, err := rp.create(context.Background())
 
-		pod, err := rp.create(context.Background())
-		Expect(err).To(BeNil())
-		Expect(pod.Name).To(Equal(exepectedPodName))
-	})
+				Expect(err).To(BeNil())
+				Expect(pod.Name).To(Equal(expectedPodName))
+				Expect(pod.Namespace).To(Equal(rp.Namespace))
+				Expect(pod.Spec.Containers[0].Name).To(Equal(defaultContainerName))
+				Expect(pod.Spec.Containers[0].Ports[0].ContainerPort).To(Equal(rp.GRPCPort))
+			})
+		})
 
-	It("create registry pod - invalid", func() {
-		rp.BundleImage = "invalid"
-		exepectedErr := "error in building registry pod"
+		Context("when invalid registry pod values", func() {
+			BeforeEach(func() {
+				rp.BundleImage = "non/existent/image"
+			})
 
-		_, err := rp.create(context.Background())
-		Expect(err).ToNot(BeNil())
-		Expect(err.Error()).Should(ContainSubstring(exepectedErr))
+			It("should error upon invalid bundle image", func() {
+				expectedErr := "invalid bundle image name"
+
+				_, err := rp.build()
+
+				Expect(err).NotTo(BeNil())
+				Expect(err.Error()).Should(ContainSubstring(expectedErr))
+			})
+
+			It("should not create a registry pod with invalid bundle image", func() {
+				exepectedErr := "error in building registry pod"
+
+				_, err := rp.create(context.Background())
+				Expect(err).ToNot(BeNil())
+				Expect(err.Error()).Should(ContainSubstring(exepectedErr))
+			})
+		})
 	})
 })
