@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"text/template"
 	"time"
 
@@ -36,6 +37,8 @@ const (
 	defaultContainerName     = "registry-grpc"
 	defaultContainerPortName = "grpc"
 	defaultGRPCPort          = 50051
+	semverBundleAddMode      = "semver"
+	replacesBundleAddMode    = "replaces"
 )
 
 // RegistryPod holds resources necessary for creation of a registry server
@@ -158,27 +161,29 @@ func (rp *RegistryPod) setDefaults() {
 
 	if len(rp.BundleAddMode) == 0 {
 		if rp.IndexImage == defaultIndexImage {
-			rp.BundleAddMode = "semver"
+			rp.BundleAddMode = semverBundleAddMode
 		} else {
-			rp.BundleAddMode = "replaces"
+			rp.BundleAddMode = replacesBundleAddMode
 		}
 	}
 }
 
 func (rp *RegistryPod) validate() error {
 	if len(rp.BundleImage) == 0 {
-		return errors.New("bundle image is required")
+		return errors.New("bundle image cannot be empty")
 	}
 	if len(rp.DBPath) == 0 {
-		return errors.New("registry database path is required")
+		return errors.New("registry database path cannot be empty")
 	}
 
 	if len(rp.Namespace) == 0 {
-		return errors.New("pod namespace is required")
+		return errors.New("pod namespace cannot be empty")
 	}
 
 	if len(rp.BundleAddMode) == 0 {
-		panic("bundle add mode is not set")
+		panic("bundle add mode cannot be empty")
+	} else if len(strings.TrimSpace(rp.BundleAddMode)) > 0 && rp.BundleAddMode != semverBundleAddMode && rp.BundleAddMode != replacesBundleAddMode {
+		return errors.New("invalid bundle add mode")
 	}
 
 	return nil
@@ -233,7 +238,9 @@ func (rp *RegistryPod) build() (*corev1.Pod, error) {
 }
 
 func (rp *RegistryPod) getContainerCmd() (string, error) {
-	const containerCommand = `/bin/mkdir -p {{ .DBPath | basename }} &&  /bin/opm registry add -d {{ .DBPath | basename }} -b {{.BundleImage}} --mode={{.BundleAddMode}} && /bin/opm registry serve -d {{ .DBPath | basename }} -p {{.GRPCPort}}`
+	const containerCommand = "/bin/mkdir -p {{ .DBPath | basename }} &&" +
+		"/bin/opm registry add -d {{ .DBPath | basename }} -b {{.BundleImage}} --mode={{.BundleAddMode}} &&" +
+		"/bin/opm registry serve -d {{ .DBPath | basename }} -p {{.GRPCPort}}"
 	type bundleCmd struct {
 		BundleImage, DBPath, BundleAddMode string
 		GRPCPort                           int32

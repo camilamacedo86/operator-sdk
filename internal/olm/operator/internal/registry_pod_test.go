@@ -40,7 +40,7 @@ var _ = Describe("RegistryPod", func() {
 		rp = &RegistryPod{
 			Kubeclient:  newFakeClient(),
 			DBPath:      "/database/index.db",
-			BundleImage: "quay.io/joelanford/example-operator-bundle:0.2.0",
+			BundleImage: "quay.io/example/example-operator-bundle:0.2.0",
 			Namespace:   "default",
 			GRPCPort:    50051,
 		}
@@ -58,13 +58,14 @@ var _ = Describe("RegistryPod", func() {
 
 			BeforeEach(func() {
 				expectedPodName = "example-operator-bundle-index"
-				expectedOutput = "/bin/mkdir -p index.db &&  /bin/opm registry add -d index.db -b quay.io/joelanford/example-operator-bundle:0.2.0 --mode=semver && /bin/opm registry serve -d index.db -p 50051"
+				expectedOutput = "/bin/mkdir -p index.db &&" +
+					"/bin/opm registry add -d index.db -b quay.io/example/example-operator-bundle:0.2.0 --mode=semver &&" +
+					"/bin/opm registry serve -d index.db -p 50051"
 			})
 
 			It("should successfully validate pod", func() {
-				err := rp.validate()
 
-				Expect(err).To(BeNil())
+				Expect(rp.validate()).Should(Succeed())
 			})
 
 			It("should construct the pod name from the bundle name successfully", func() {
@@ -81,7 +82,11 @@ var _ = Describe("RegistryPod", func() {
 				Expect(pod.Name).To(Equal(expectedPodName))
 				Expect(pod.Namespace).To(Equal(rp.Namespace))
 				Expect(pod.Spec.Containers[0].Name).To(Equal(defaultContainerName))
-				Expect(pod.Spec.Containers[0].Ports[0].ContainerPort).To(Equal(rp.GRPCPort))
+				if len(pod.Spec.Containers) > 0 {
+					if len(pod.Spec.Containers[0].Ports) > 0 {
+						Expect(pod.Spec.Containers[0].Ports[0].ContainerPort).To(Equal(rp.GRPCPort))
+					}
+				}
 			})
 
 			It("should return a valid container command", func() {
@@ -94,11 +99,15 @@ var _ = Describe("RegistryPod", func() {
 			It("should successfully create registry pod without any errors", func() {
 				pod, err := rp.create(context.Background())
 
-				Expect(err).To(BeNil())
+				Expect(err).Should(Succeed())
 				Expect(pod.Name).To(Equal(expectedPodName))
 				Expect(pod.Namespace).To(Equal(rp.Namespace))
 				Expect(pod.Spec.Containers[0].Name).To(Equal(defaultContainerName))
-				Expect(pod.Spec.Containers[0].Ports[0].ContainerPort).To(Equal(rp.GRPCPort))
+				if len(pod.Spec.Containers) > 0 {
+					if len(pod.Spec.Containers[0].Ports) > 0 {
+						Expect(pod.Spec.Containers[0].Ports[0].ContainerPort).To(Equal(rp.GRPCPort))
+					}
+				}
 			})
 		})
 
