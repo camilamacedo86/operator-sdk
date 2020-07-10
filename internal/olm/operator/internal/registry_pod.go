@@ -74,11 +74,11 @@ func newRegistryPod(kubeclient kubernetes.Interface, dbPath, bundleImage, namesp
 		rp.GRPCPort = defaultGRPCPort
 	}
 
-	if len(rp.IndexImage) == 0 {
+	if rp.IndexImage == "" {
 		rp.IndexImage = defaultIndexImage
 	}
 
-	if len(rp.BundleAddMode) == 0 {
+	if rp.BundleAddMode == "" {
 		if rp.IndexImage == defaultIndexImage {
 			rp.BundleAddMode = semverBundleAddMode
 		} else {
@@ -187,7 +187,7 @@ func (rp *RegistryPod) validate() error {
 	}
 
 	if len(rp.BundleAddMode) == 0 {
-		panic("bundle add mode cannot be empty")
+		return errors.New("bundle add mode cannot be empty")
 	}
 	if rp.BundleAddMode != semverBundleAddMode && rp.BundleAddMode != replacesBundleAddMode {
 		return errors.New("invalid bundle mode")
