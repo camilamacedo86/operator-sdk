@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"strings"
 	"text/template"
 	"time"
 
@@ -67,9 +66,44 @@ type RegistryPod struct {
 	GRPCPort int32
 }
 
-// Create returns a bundle registry pod built from an index image after verifying successful creation
-func (rp *RegistryPod) Create(ctx context.Context) (*corev1.Pod, string, error) {
-	pod, err := rp.create(ctx)
+// newRegistryPod initializes the RegistryPod struct and sets defaults for empty fields
+func newRegistryPod(kubeclient kubernetes.Interface, dbPath, bundleImage, namespace string) *RegistryPod {
+	rp := &RegistryPod{}
+
+	if rp.GRPCPort == 0 {
+		rp.GRPCPort = defaultGRPCPort
+	}
+
+	if len(rp.IndexImage) == 0 {
+		rp.IndexImage = defaultIndexImage
+	}
+
+	if len(rp.BundleAddMode) == 0 {
+		if rp.IndexImage == defaultIndexImage {
+			rp.BundleAddMode = semverBundleAddMode
+		} else {
+			rp.BundleAddMode = replacesBundleAddMode
+		}
+	}
+	rp.Kubeclient = kubeclient
+	rp.DBPath = dbPath
+	rp.BundleImage = bundleImage
+	rp.Namespace = namespace
+
+	return rp
+}
+
+// CreateOnCluster returns a bundle registry pod built from an index image
+// after verifying successful creation of the pod, or returns the pod logs and error in case of failures
+func (rp *RegistryPod) CreateOnCluster(ctx context.Context) (*corev1.Pod, string, error) {
+	// validate the RegistryPod struct and ensure required fields are set
+	err := rp.validate()
+	if err != nil {
+		return nil, "", fmt.Errorf("error in validating RegistryPod struct: %v", err)
+	}
+
+	// create the registry pod on the cluster
+	pod, err := rp.createPodOnCluster(ctx)
 	if err != nil {
 		podLogs, logErr := rp.FetchPodLogs(ctx, pod)
 		if logErr != nil {
@@ -78,7 +112,8 @@ func (rp *RegistryPod) Create(ctx context.Context) (*corev1.Pod, string, error) 
 		return nil, podLogs, fmt.Errorf("error creating pod: %v", err)
 	}
 
-	err = rp.verifyPodRunning(ctx, pod)
+	// verify that pod is successfully created
+	err = rp.validatePodOnCluster(ctx, pod)
 	if err != nil {
 		podLogs, logErr := rp.FetchPodLogs(ctx, pod)
 		if logErr != nil {
@@ -90,16 +125,10 @@ func (rp *RegistryPod) Create(ctx context.Context) (*corev1.Pod, string, error) 
 	return pod, "", nil
 }
 
-// create returns a pod built from an index image or returns if an existing pod with the same name is found
-func (rp *RegistryPod) create(ctx context.Context) (*corev1.Pod, error) {
-	// call init() to set defaults and validate the RegistryPod struct
-	err := rp.init()
-	if err != nil {
-		return nil, fmt.Errorf("error in initializing and validating registry pod: %v", err)
-	}
-
-	// call build() to make the pod definition
-	pod, err := rp.build()
+// createPodOnCluster returns a pod built from an index image or returns if an existing pod with the same name is found
+func (rp *RegistryPod) createPodOnCluster(ctx context.Context) (*corev1.Pod, error) {
+	// call podForBundleRegistry() to make the pod definition
+	pod, err := rp.podForBundleRegistry()
 	if err != nil {
 		return nil, fmt.Errorf("error in building registry pod: %v", err)
 	}
@@ -123,7 +152,8 @@ func (rp *RegistryPod) create(ctx context.Context) (*corev1.Pod, error) {
 	return pod, nil
 }
 
-func (rp *RegistryPod) verifyPodRunning(ctx context.Context, pod *corev1.Pod) error {
+// validatePodOnCluster polls and verifies that the pod status is running
+func (rp *RegistryPod) validatePodOnCluster(ctx context.Context, pod *corev1.Pod) error {
 	// Upon creation of new pod, poll and verify that pod status is running
 	podCheck := wait.ConditionFunc(func() (done bool, err error) {
 		p, err := rp.Kubeclient.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
@@ -133,6 +163,7 @@ func (rp *RegistryPod) verifyPodRunning(ctx context.Context, pod *corev1.Pod) er
 		return p.Status.Phase == corev1.PodRunning, nil
 	})
 
+	// poll every 200 ms until podCheck is true or context is done
 	err := wait.PollImmediateUntil(time.Duration(200*time.Millisecond), podCheck, ctx.Done())
 	if err != nil {
 		return fmt.Errorf("error waiting for registry pod %s to run: %v", pod.Name, err)
@@ -141,33 +172,8 @@ func (rp *RegistryPod) verifyPodRunning(ctx context.Context, pod *corev1.Pod) er
 	return err
 }
 
-func (rp *RegistryPod) init() error {
-	rp.setDefaults()
-	err := rp.validate()
-	if err != nil {
-		return fmt.Errorf("error in validating registry pod: %v", err)
-	}
-	return nil
-}
-
-func (rp *RegistryPod) setDefaults() {
-	if rp.GRPCPort == 0 {
-		rp.GRPCPort = defaultGRPCPort
-	}
-
-	if len(rp.IndexImage) == 0 {
-		rp.IndexImage = defaultIndexImage
-	}
-
-	if len(rp.BundleAddMode) == 0 {
-		if rp.IndexImage == defaultIndexImage {
-			rp.BundleAddMode = semverBundleAddMode
-		} else {
-			rp.BundleAddMode = replacesBundleAddMode
-		}
-	}
-}
-
+// validate will ensure that RegistryPod required fields are set
+// and throws error if not set
 func (rp *RegistryPod) validate() error {
 	if len(rp.BundleImage) == 0 {
 		return errors.New("bundle image cannot be empty")
@@ -182,8 +188,9 @@ func (rp *RegistryPod) validate() error {
 
 	if len(rp.BundleAddMode) == 0 {
 		panic("bundle add mode cannot be empty")
-	} else if len(strings.TrimSpace(rp.BundleAddMode)) > 0 && rp.BundleAddMode != semverBundleAddMode && rp.BundleAddMode != replacesBundleAddMode {
-		return errors.New("invalid bundle add mode")
+	}
+	if rp.BundleAddMode != semverBundleAddMode && rp.BundleAddMode != replacesBundleAddMode {
+		return errors.New("invalid bundle mode")
 	}
 
 	return nil
@@ -199,8 +206,8 @@ func getPodName(bundleImage string) (string, error) {
 	return image.Name + "-index", nil
 }
 
-// build sets the defaults and validates the RegistryPod struct, and returns a pod definition
-func (rp *RegistryPod) build() (*corev1.Pod, error) {
+// podForBundleRegistry constructs and returns the registry pod definition
+func (rp *RegistryPod) podForBundleRegistry() (*corev1.Pod, error) {
 	podName, err := getPodName(rp.BundleImage)
 	if err != nil {
 		return nil, fmt.Errorf("error in building pod: %v", err)
@@ -237,6 +244,7 @@ func (rp *RegistryPod) build() (*corev1.Pod, error) {
 	return pod, nil
 }
 
+// getContainerCmd uses templating to construct the container command
 func (rp *RegistryPod) getContainerCmd() (string, error) {
 	const containerCommand = "/bin/mkdir -p {{ .DBPath | basename }} &&" +
 		"/bin/opm registry add -d {{ .DBPath | basename }} -b {{.BundleImage}} --mode={{.BundleAddMode}} &&" +

@@ -37,16 +37,7 @@ var _ = Describe("RegistryPod", func() {
 	var rp *RegistryPod
 
 	BeforeEach(func() {
-		rp = &RegistryPod{
-			Kubeclient:  newFakeClient(),
-			DBPath:      "/database/index.db",
-			BundleImage: "quay.io/example/example-operator-bundle:0.2.0",
-			Namespace:   "default",
-			GRPCPort:    50051,
-		}
-
-		rp.setDefaults()
-
+		rp = newRegistryPod(newFakeClient(), "/database/index.db", "quay.io/example/example-operator-bundle:0.2.0", "default")
 	})
 
 	Describe("creating registry pod", func() {
@@ -75,8 +66,8 @@ var _ = Describe("RegistryPod", func() {
 				Expect(podName).To(Equal(expectedPodName))
 			})
 
-			It("should build the pod definition successfully with a valid registry pod", func() {
-				pod, err := rp.build()
+			It("should make the pod definition successfully with a valid registry pod", func() {
+				pod, err := rp.podForBundleRegistry()
 
 				Expect(err).To(BeNil())
 				Expect(pod.Name).To(Equal(expectedPodName))
@@ -97,7 +88,7 @@ var _ = Describe("RegistryPod", func() {
 			})
 
 			It("should successfully create registry pod without any errors", func() {
-				pod, err := rp.create(context.Background())
+				pod, err := rp.createPodOnCluster(context.Background())
 
 				Expect(err).Should(Succeed())
 				Expect(pod.Name).To(Equal(expectedPodName))
@@ -119,7 +110,7 @@ var _ = Describe("RegistryPod", func() {
 			It("should error upon invalid bundle image", func() {
 				expectedErr := "invalid bundle image name"
 
-				_, err := rp.build()
+				_, err := rp.podForBundleRegistry()
 
 				Expect(err).NotTo(BeNil())
 				Expect(err.Error()).Should(ContainSubstring(expectedErr))
@@ -128,7 +119,7 @@ var _ = Describe("RegistryPod", func() {
 			It("should not create a registry pod with invalid bundle image", func() {
 				exepectedErr := "error in building registry pod"
 
-				_, err := rp.create(context.Background())
+				_, err := rp.createPodOnCluster(context.Background())
 				Expect(err).ToNot(BeNil())
 				Expect(err.Error()).Should(ContainSubstring(exepectedErr))
 			})
