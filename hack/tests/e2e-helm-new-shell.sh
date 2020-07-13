@@ -38,30 +38,11 @@ test_operator() {
         exit 1
     fi
 
-
-    # verify that the metrics endpoint exists
-    if ! timeout 1m bash -c -- "until kubectl --namespace=${test_namespace} run --attach --rm --restart=Never test-metrics --image=${metrics_test_image} -- curl -sfo /dev/null http://nginx-operator-metrics:8383/metrics; do sleep 1; done";
-    then
-        echo "Failed to verify that metrics endpoint exists"
-        kubectl get events --namespace=${test_namespace}
-        kubectl logs deployment.apps/nginx-operator-controller-manager -c manager --namespace=${test_namespace}
-        exit 1
-    fi
-
     # create CR
     kubectl create --namespace=${test_namespace} -f config/samples/example_v1alpha1_nginx.yaml
     trap_add "kubectl delete --namespace=${test_namespace} --ignore-not-found -f ${OPERATORDIR}/config/samples/example_v1alpha1_nginx.yaml" EXIT
     if ! timeout 1m bash -c -- "until kubectl get --namespace=${test_namespace} Nginx nginx-sample -o jsonpath='{..status.deployedRelease.name}' | grep 'nginx-sample'; do sleep 1; done";
     then
-        kubectl get events --namespace=${test_namespace}
-        kubectl logs deployment.apps/nginx-operator-controller-manager -c manager --namespace=${test_namespace}
-        exit 1
-    fi
-
-    # verify that the custom resource metrics endpoint exists
-    if ! timeout 1m bash -c -- "until kubectl --namespace=${test_namespace} run --attach --rm --restart=Never test-cr-metrics --image=${metrics_test_image} -- curl -sfo /dev/null http://nginx-operator-metrics:8686/metrics; do sleep 1; done";
-    then
-        echo "Failed to verify that custom resource metrics endpoint exists"
         kubectl get events --namespace=${test_namespace}
         kubectl logs deployment.apps/nginx-operator-controller-manager -c manager --namespace=${test_namespace}
         exit 1
@@ -143,13 +124,6 @@ load_image_if_kind "$DEST_IMAGE"
 
 make install
 make deploy IMG="$DEST_IMAGE"
-
-# kind has an issue with certain image registries (ex. redhat's), so use a
-# different test pod image.
-METRICS_TEST_IMAGE="fedora:latest"
-docker pull "$METRICS_TEST_IMAGE"
-# If using a kind cluster, load the metrics test image into all nodes.
-load_image_if_kind "$METRICS_TEST_IMAGE"
 OPERATORDIR="$(pwd)"
 
 trap_add 'remove_operator' EXIT
