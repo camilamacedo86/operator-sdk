@@ -40,7 +40,7 @@ test_operator() {
 
 
     # verify that the metrics endpoint exists
-    if ! timeout 1m bash -c -- "until kubectl run --attach --rm --restart=Never test-metrics --image=${metrics_test_image} -- curl -sfo /dev/null http://nginx-operator-metrics:8383/metrics; do sleep 1; done";
+    if ! timeout 1m bash -c -- "until kubectl --namespace=${test_namespace} run --attach --rm --restart=Never test-metrics --image=${metrics_test_image} -- curl -sfo /dev/null http://nginx-operator-metrics:8383/metrics; do sleep 1; done";
     then
         echo "Failed to verify that metrics endpoint exists"
         kubectl get events --namespace=${test_namespace}
@@ -59,7 +59,7 @@ test_operator() {
     fi
 
     # verify that the custom resource metrics endpoint exists
-    if ! timeout 1m bash -c -- "until kubectl run --attach --rm --restart=Never test-cr-metrics --image=${metrics_test_image} -- curl -sfo /dev/null http://nginx-operator-metrics:8686/metrics; do sleep 1; done";
+    if ! timeout 1m bash -c -- "until kubectl --namespace=${test_namespace} run --attach --rm --restart=Never test-cr-metrics --image=${metrics_test_image} -- curl -sfo /dev/null http://nginx-operator-metrics:8686/metrics; do sleep 1; done";
     then
         echo "Failed to verify that custom resource metrics endpoint exists"
         kubectl get events --namespace=${test_namespace}
