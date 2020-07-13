@@ -130,4 +130,3 @@ trap_add 'remove_operator' EXIT
 test_operator
 
 popd
-popd
