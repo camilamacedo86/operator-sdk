@@ -58,7 +58,7 @@ test_operator() {
     fi
 
     release_name=$(kubectl get --namespace=${test_namespace} Nginx nginx-sample -o jsonpath="{..status.deployedRelease.name}")
-    nginx_deployment=$(kubectl get --namespace=${test_namespace}  deployment.apps -l "app.kubernetes.io/instance=${release_name}" -o jsonpath="{..metadata.name}")
+    nginx_deployment=$(kubectl get --namespace=${test_namespace}  deployments -l "app.kubernetes.io/instance=${release_name}" -o jsonpath="{..metadata.name}")
 
     if ! timeout 1m kubectl rollout --namespace=${test_namespace} status deployment.apps/${nginx_deployment};
     then
@@ -79,19 +79,19 @@ test_operator() {
     then
         kubectl get events --namespace=${test_namespace}
         kubectl describe --namespace=${test_namespace} pods -l "app.kubernetes.io/instance=${release_name}"
-        kubectl describe --namespace=${test_namespace}  deployment.apps ${nginx_deployment}
+        kubectl describe --namespace=${test_namespace} deployments ${nginx_deployment}
         kubectl logs deployment.apps/nginx-operator-controller-manager -c manager --namespace=${test_namespace}
         exit 1
     fi
 
     # update CR to replicaCount=2 and verify the deployment
     # automatically scales up to 2 replicas.
-    kubectl patch --namespace=${test_namespace} nginxes.helm.example.com example-nginx -p '[{"op":"replace","path":"/spec/replicaCount","value":2}]' --type=json
+    kubectl patch --namespace=${test_namespace}  Nginx nginx-sample -p '[{"op":"replace","path":"/spec/replicaCount","value":2}]' --type=json
     if ! timeout 1m bash -c -- "until test \$(kubectl get --namespace=${test_namespace} deployment/${nginx_deployment} -o jsonpath='{..spec.replicas}') -eq 2; do sleep 1; done";
     then
         kubectl get events --namespace=${test_namespace}
         kubectl describe --namespace=${test_namespace} pods -l "app.kubernetes.io/instance=${release_name}"
-        kubectl describe --namespace=${test_namespace}  deployment.apps ${nginx_deployment}
+        kubectl describe --namespace=${test_namespace} deployments ${nginx_deployment}
         kubectl logs deployment.apps/nginx-operator-controller-manager -c manager --namespace=${test_namespace}
         exit 1
     fi
