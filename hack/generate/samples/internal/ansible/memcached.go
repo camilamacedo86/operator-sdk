@@ -89,7 +89,7 @@ func (ma *MemcachedAnsible) addingMoleculeMockData() {
 		fmt.Sprintf("%s_test.yml", strings.ToLower(ma.ctx.Kind)))
 
 	err := testutils.ReplaceInFile(moleculeTaskPath,
-		fixmeAssert, moleculeTaskFragment)
+		originaMemcachedMoleculeTask, fmt.Sprintf(moleculeTaskFragment, ma.ctx.ProjectName, ma.ctx.ProjectName))
 	pkg.CheckError("replacing molecule default tasks", err)
 }
 

@@ -48,89 +48,163 @@ const roleFragment = `
 
 const defaultsFragment = `size: 1`
 
-const moleculeTaskFragment = `- name: Create the cache.example.com/v1alpha1.Memcached
+const moleculeTaskFragment = `- name: Load CR
+  set_fact:
+    custom_resource: "{{ lookup('template', '/'.join([samples_dir, cr_file])) | from_yaml }}"
+  vars:
+    cr_file: 'cache_v1alpha1_memcached.yaml'
+
+- name: Create the cache.example.com/v1alpha1.Memcached
   k8s:
     state: present
-    namespace: "{{ namespace }}"
-    definition: "{{ lookup('template', '/'.join([samples_dir, cr_file])) | from_yaml }}"
+    namespace: '{{ namespace }}'
+    definition: '{{ custom_resource }}'
     wait: yes
     wait_timeout: 300
     wait_condition:
       type: Running
       reason: Successful
       status: "True"
+
+- name: Wait 2 minutes for memcached deployment
+  debug:
+    var: deploy
+  until:
+  - deploy is defined
+  - deploy.status is defined
+  - deploy.status.replicas is defined
+  - deploy.status.replicas == deploy.status.get("availableReplicas", 0)
+  retries: 12
+  delay: 10
   vars:
-    cr_file: 'cache_v1alpha1_memcached.yaml'
+    deploy: '{{ lookup("k8s",
+      kind="Deployment",
+      api_version="apps/v1",
+      namespace=namespace,
+      label_selector="app=memcached"
+    )}}'
 
-- name: Wait 2 minutes for memcached pod to start
-  k8s_info:
-    kind: "Pod"
-    api_version: "v1"
-    namespace: "osdk-test"
-    label_selectors:
-      - app = memcached
-  register: pod_list
-  until:
-    - pod_list.resources is defined
-    - pod_list.resources|length == 1
-  retries: 12
-  delay: 10
+- name: Verify custom status exists
+  assert:
+    that: debug_cr.status.get("test") == "hello world"
+  vars:
+    debug_cr: '{{ lookup("k8s",
+      kind=custom_resource.kind,
+      api_version=custom_resource.apiVersion,
+      namespace=namespace,
+      resource_name=custom_resource.metadata.name
+    )}}'
 
-- name: Delete memcached pod
-  community.kubernetes.k8s:
-    state: absent
-    definition:
-      kind: Pod
+- when: molecule_yml.scenario.name == "test-local"
+  block:
+  - name: Restart the operator by killing the pod
+    k8s:
+      state: absent
+      definition:
+        api_version: v1
+        kind: Pod
+        metadata:
+          namespace: '{{ namespace }}'
+          name: '{{ pod.metadata.name }}'
+    vars:
+      pod: '{{ q("k8s", api_version="v1", kind="Pod", namespace=namespace, label_selector="name=%s").0 }}'
+
+  - name: Wait 2 minutes for operator deployment
+    debug:
+      var: deploy
+    until:
+    - deploy is defined
+    - deploy.status is defined
+    - deploy.status.replicas is defined
+    - deploy.status.replicas == deploy.status.get("availableReplicas", 0)
+    retries: 12
+    delay: 10
+    vars:
+      deploy: '{{ lookup("k8s",
+        kind="Deployment",
+        api_version="apps/v1",
+        namespace=namespace,
+        resource_name="%s"
+      )}}'
+
+  - name: Wait for reconciliation to have a chance at finishing
+    pause:
+      seconds:  15
+
+  - name: Delete the service that is created.
+    k8s:
+      kind: Service
       api_version: v1
-      metadata:
-        namespace: "{{ namespace }}"
-        name: "{{ item.metadata.name }}"
-  loop: "{{ pod_list.resources }}"
+      namespace: '{{ namespace }}'
+      name: test-service
+      state: absent
 
-- name: pause
-  pause:
-    seconds: 10
+  - name: Verify that test-service was re-created
+    debug:
+      var: service
+    until: service
+    retries: 12
+    delay: 10
+    vars:
+      service: '{{ lookup("k8s",
+        kind="Service",
+        api_version="v1",
+        namespace=namespace,
+        resource_name="test-service",
+      )}}'
 
-- name: Wait 2 minutes for memcached pod to restart
-  k8s_info:
-    kind: "Pod"
-    api_version: "v1"
-    namespace: "osdk-test"
-    label_selectors:
-      - app = memcached
-  register: pod_list
-  until:
-    - pod_list.resources is defined
-    - pod_list.resources|length == 1
-  retries: 12
-  delay: 10
-
-
-- name: Edit Memcached size
+- name: Delete the custom resource
   k8s:
-    state: present
-    namespace: "{{ namespace }}"
-    definition:
-      apiVersion: cache.example.com/v1alpha1
-      kind: Memcached
-      metadata:
-        name: memcached-sample
-      spec:
-        size: 3
+    state: absent
+    namespace: '{{ namespace }}'
+    definition: '{{ custom_resource }}'
 
-- name: Wait 2 minutes for 3 memcached pods
+- name: Wait for the custom resource to be deleted
   k8s_info:
-    kind: "Pod"
-    api_version: "v1"
-    namespace: "osdk-test"
-    label_selectors:
-      - app = memcached
-  register: pod_list
-  until:
-    - pod_list.resources is defined
-    - pod_list.resources|length == 1
-  retries: 12
-  delay: 10
+    api_version: '{{ custom_resource.apiVersion }}'
+    kind: '{{ custom_resource.kind }}'
+    namespace: '{{ namespace }}'
+    name: '{{ custom_resource.metadata.name }}'
+  register: cr
+  retries: 10
+  delay: 6
+  until: not cr.resources
+  failed_when: cr.resources
+
+- name: Verify the Deployment was deleted (wait 30s)
+  assert:
+    that: not lookup('k8s', kind='Deployment', api_version='apps/v1', namespace=namespace, label_selector='app=memcached')
+  retries: 10
+  delay: 3
+`
+
+const memcachedCustomStatusMoleculeTarget = `- name: Verify custom status exists
+  assert:
+    that: debug_cr.status.get("test") == "hello world"
+  vars:
+    debug_cr: '{{ lookup("k8s",
+      kind=custom_resource.kind,
+      api_version=custom_resource.apiVersion,
+      namespace=namespace,
+      resource_name=custom_resource.metadata.name
+    )}}'`
+
+// false positive: G101: Potential hardcoded credentials (gosec)
+// nolint:gosec
+const testSecretMoleculeCheck = `
+
+# This will verify that the secret role was executed
+- name: Verify that test-service was created
+  assert:
+    that: lookup('k8s', kind='Service', api_version='v1', namespace=namespace, resource_name='test-service')
+`
+
+const testFooMoleculeCheck = `
+
+- name: Verify that project testing-foo was created
+  assert:
+    that: lookup('k8s', kind='Namespace', api_version='v1', resource_name='testing-foo')
+  when: "'project.openshift.io' in lookup('k8s', cluster_info='api_groups')"
 `
 
 // false positive: G101: Potential hardcoded credentials (gosec)
@@ -175,6 +249,57 @@ const fixmeAssert = `
     fail_msg: FIXME Add real assertions for your operator
 `
 
+const originaMemcachedMoleculeTask = `- name: Create the cache.example.com/v1alpha1.Memcached
+  k8s:
+    state: present
+    namespace: '{{ namespace }}'
+    definition: "{{ lookup('template', '/'.join([samples_dir, cr_file])) | from_yaml }}"
+    wait: yes
+    wait_timeout: 300
+    wait_condition:
+      type: Running
+      reason: Successful
+      status: "True"
+  vars:
+    cr_file: 'cache_v1alpha1_memcached.yaml'
+
+- name: Add assertions here
+  assert:
+    that: false
+    fail_msg: FIXME Add real assertions for your operator`
+
+const targetMoleculeCheckDeployment = `- name: Wait 2 minutes for memcached deployment
+  debug:
+    var: deploy
+  until:
+  - deploy is defined
+  - deploy.status is defined
+  - deploy.status.replicas is defined
+  - deploy.status.replicas == deploy.status.get("availableReplicas", 0)
+  retries: 12
+  delay: 10
+  vars:
+    deploy: '{{ lookup("k8s",
+      kind="Deployment",
+      api_version="apps/v1",
+      namespace=namespace,
+      label_selector="app=memcached"
+    )}}'`
+
+const molecuTaskToCheckConfigMap = `
+
+- name: Create ConfigMap that the Operator should delete
+  k8s:
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: deleteme
+        namespace: '{{ namespace }}'
+      data:
+        delete: me
+`
+
 const memcachedWithBlackListTask = `
 - name: start memcached
   community.kubernetes.k8s:
@@ -212,6 +337,7 @@ const memcachedWithBlackListTask = `
                   port: 11211
                 initialDelaySeconds: 3
                 periodSeconds: 3
+
 - operator_sdk.util.k8s_status:
     api_version: cache.example.com/v1alpha1
     kind: Memcached
@@ -219,6 +345,7 @@ const memcachedWithBlackListTask = `
     namespace: "{{ ansible_operator_meta.namespace }}"
     status:
       test: "hello world"
+
 - community.kubernetes.k8s:
     definition:
       kind: Secret
@@ -231,6 +358,7 @@ const memcachedWithBlackListTask = `
 - name: Get cluster api_groups
   set_fact:
     api_groups: "{{ lookup('community.kubernetes.k8s', cluster_info='api_groups', kubeconfig=lookup('env', 'K8S_AUTH_KUBECONFIG')) }}"
+
 - name: create project if projects are available
   community.kubernetes.k8s:
     definition:
@@ -239,6 +367,7 @@ const memcachedWithBlackListTask = `
       metadata:
         name: testing-foo
   when: "'project.openshift.io' in api_groups"
+
 - name: Create ConfigMap to test blacklisted watches
   community.kubernetes.k8s:
     definition:

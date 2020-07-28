@@ -15,9 +15,12 @@
 package ansible
 
 import (
+	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	kbtestutils "sigs.k8s.io/kubebuilder/test/e2e/utils"
 
 	"github.com/operator-framework/operator-sdk/hack/generate/samples/internal/pkg"
 	"github.com/operator-framework/operator-sdk/internal/testutils"
@@ -57,8 +60,23 @@ func (ma *MoleculeAnsible) Run() {
 	memcached := NewMemcachedAnsible(ma.ctx)
 	memcached.Run()
 
+	moleculeTaskPath := filepath.Join(ma.ctx.Dir, "molecule", "default", "tasks",
+		fmt.Sprintf("%s_test.yml", strings.ToLower(ma.ctx.Kind)))
+
+	log.Infof("insert molecule task to ensure that ConfigMap will be deleted")
+	err := kbtestutils.InsertCode(moleculeTaskPath, targetMoleculeCheckDeployment, molecuTaskToCheckConfigMap)
+	pkg.CheckError("replacing memcached task to add config map check", err)
+
+	log.Infof("insert molecule task to ensure to check secret")
+	err = kbtestutils.InsertCode(moleculeTaskPath, memcachedCustomStatusMoleculeTarget, testSecretMoleculeCheck)
+	pkg.CheckError("replacing memcached task to add secret check", err)
+
+	log.Infof("insert molecule task to ensure to foo ")
+	err = kbtestutils.InsertCode(moleculeTaskPath, testSecretMoleculeCheck, testFooMoleculeCheck)
+	pkg.CheckError("replacing memcached task to add foo check", err)
+
 	log.Infof("replacing project Dockerfile to use ansible base image with the dev tag")
-	err := testutils.ReplaceRegexInFile(filepath.Join(ma.ctx.Dir, "Dockerfile"), "quay.io/operator-framework/ansible-operator:.*", "quay.io/operator-framework/ansible-operator:dev")
+	err = testutils.ReplaceRegexInFile(filepath.Join(ma.ctx.Dir, "Dockerfile"), "quay.io/operator-framework/ansible-operator:.*", "quay.io/operator-framework/ansible-operator:dev")
 	pkg.CheckError("replacing Dockerfile", err)
 
 	log.Infof("adding RBAC permissions")
@@ -70,6 +88,14 @@ func (ma *MoleculeAnsible) Run() {
 	err = testutils.ReplaceInFile(filepath.Join(ma.ctx.Dir, "roles", strings.ToLower(ma.ctx.Kind), "tasks", "main.yml"),
 		roleFragment, memcachedWithBlackListTask)
 	pkg.CheckError("replacing in tasks/main.yml", err)
+
+	log.Infof("creating an API definition Foo")
+	err = ma.ctx.CreateAPI(
+		"--group", ma.ctx.Group,
+		"--version", ma.ctx.Version,
+		"--kind", "Foo",
+		"--generate-role")
+	pkg.CheckError("creating api", err)
 
 	log.Infof("creating an API definition to add a task to delete the config map")
 	err = ma.ctx.CreateAPI(
@@ -130,6 +156,11 @@ func (ma *MoleculeAnsible) Run() {
 	err = testutils.ReplaceInFile(filepath.Join(ma.ctx.Dir, "molecule", "default", "tasks", "memfin_test.yml"),
 		fixmeAssert, "")
 	pkg.CheckError("replacing memfin_test.yml", err)
+
+	log.Infof("removing FIXME asserts from foo_test.yml")
+	err = testutils.ReplaceInFile(filepath.Join(ma.ctx.Dir, "molecule", "default", "tasks", "foo_test.yml"),
+		fixmeAssert, "")
+	pkg.CheckError("replacing foo_test.yml", err)
 }
 
 // GenerateMoleculeAnsibleSample will call all actions to create the directory and generate the sample
