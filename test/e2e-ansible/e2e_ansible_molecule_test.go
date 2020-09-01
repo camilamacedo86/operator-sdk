@@ -15,6 +15,7 @@
 package e2e_ansible_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
@@ -81,25 +82,27 @@ var _ = Describe("Testing ansible projects", func() {
 			testutils.ReplaceInFile(filepath.Join(tc.Dir, "molecule", "default", "tasks", "memfin_test.yml"),
 				fixmeAssert, "")
 
-			By("testing molecule kind")
+			By("testing with molecule")
 			cmd = exec.Command("make", "molecule-kind")
-			_, err = tc.Run(cmd)
+			output, err := tc.Run(cmd)
 			Expect(err).NotTo(HaveOccurred())
-			
-			By("building the project image")
-			err = tc.Make("docker-build", "IMG="+imageTest)
-			Expect(err).Should(Succeed())
+			fmt.Printf("The molecule test --all output is %s\n", output)
 
-			if isRunningOnKind() {
-				By("loading the operator base image for molecule into Kind cluster")
-				err = tc.LoadImageToKindClusterWithName(imageTest)
-				Expect(err).Should(Succeed())
-			}
-
-			By("Test Ansible Molecule scenario")
-			cmd = exec.Command("make", "molecule", "IMG="+imageTest)
-			_, err = tc.Run(cmd)
-			Expect(err).NotTo(HaveOccurred())
+			//By("building the project image")
+			//err = tc.Make("docker-build", "IMG="+imageTest)
+			//Expect(err).Should(Succeed())
+			//
+			//if isRunningOnKind() {
+			//	By("loading the operator base image for molecule into Kind cluster")
+			//	err = tc.LoadImageToKindClusterWithName(imageTest)
+			//	Expect(err).Should(Succeed())
+			//}
+			//
+			//By("Test Ansible Molecule scenario")
+			//cmd = exec.Command("make", "molecule", "IMG="+imageTest)
+			//output, err = tc.Run(cmd)
+			//Expect(err).NotTo(HaveOccurred())
+			//fmt.Printf("The molecule test all kind output is %s\n", output)
 		})
 	})
 })
@@ -125,7 +128,7 @@ molecule:
 	KUSTOMIZE_PATH=$(KUSTOMIZE) OPERATOR_PULL_POLICY=Never OPERATOR_IMAGE=$(IMG) TEST_OPERATOR_NAMESPACE=osdk-test molecule test --all
 
 molecule-kind: 
-	KUSTOMIZE_PATH=$(KUSTOMIZE) TEST_OPERATOR_NAMESPACE=default molecule test -s kind
+	KUSTOMIZE_PATH=$(KUSTOMIZE) TEST_OPERATOR_NAMESPACE=default molecule test --all
 `
 
 const originalTaskSecret = `---
