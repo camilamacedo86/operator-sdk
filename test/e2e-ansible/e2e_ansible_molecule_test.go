@@ -28,7 +28,7 @@ import (
 
 var _ = Describe("Testing ansible projects", func() {
 	Context("with molecule", func() {
-		var imageTest = "quay.io/example/ansible-test-operator:v0.0.1"
+		//var imageTest = "quay.io/example/ansible-test-operator:v0.0.1"
 
 		It("should run molecule tests", func() {
 			By("allowing the project be multigroup")
