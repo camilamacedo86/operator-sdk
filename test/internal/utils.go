@@ -112,3 +112,22 @@ func (tc TestContext) LoadImageToKindClusterWithName(image string) error {
 	_, err := tc.Run(cmd)
 	return err
 }
+
+// AllowProjectBeMultiGroup will update the PROJECT file with the information to allow we scaffold
+// apis with different groups.
+func (tc TestContext) AllowProjectBeMultiGroup() error {
+	projectBytes, err := ioutil.ReadFile(filepath.Join(tc.Dir, "PROJECT"))
+	if err != nil {
+		return err
+	}
+
+	projectBytes = append([]byte(multiGroup), projectBytes...)
+	err = ioutil.WriteFile(filepath.Join(tc.Dir, "PROJECT"), projectBytes, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+const multiGroup = `multigroup: true
+`

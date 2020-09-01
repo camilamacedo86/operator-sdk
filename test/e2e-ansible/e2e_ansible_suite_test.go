@@ -300,6 +300,7 @@ const rolesForBaseOperator = `
       - ""
     resources:
       - configmaps
+      - services
     verbs:
       - create
       - delete

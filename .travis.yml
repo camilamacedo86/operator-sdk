@@ -125,7 +125,6 @@ jobs:
         - pip install --user ansible
       script:
         - make test-e2e-ansible
-        - make test-e2e-ansible-molecule
 
     # Test subcommands
     - <<: *test
