@@ -98,7 +98,7 @@ Some features can be overridden per resource via an annotation on that CR. The o
 
 | Feature | Yaml Key | Description| Annotation for override | default | Documentation |
 |---------|----------|------------|-------------------------|---------|---------------|
-| Reconcile Period | `reconcilePeriod`  | time between reconcile runs for a particular CR  | ansible.sdk.operatorframework.io/reconcile-period  | 1m | |
+| Reconcile Period | `reconcilePeriod`  | time between reconcile runs for a particular CR  | ansible.sdk.operatorframework.io/reconcile-period  | 0 | |
 | Manage Status | `manageStatus` | Allows the ansible operator to manage the conditions section of each resource's status section. | | true | |
 | Watching Dependent Resources | `watchDependentResources` | Allows the ansible operator to dynamically watch resources that are created by ansible | | true | [dependent watches](../dependent-watches) |
 | Watching Cluster-Scoped Resources | `watchClusterScopedResources` | Allows the ansible operator to watch cluster-scoped resources that are created by ansible | | false | |

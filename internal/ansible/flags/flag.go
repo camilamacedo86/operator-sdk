@@ -44,7 +44,7 @@ const AnsibleCollectionsPathEnvVar = "ANSIBLE_COLLECTIONS_PATH"
 func (f *Flags) AddTo(flagSet *pflag.FlagSet) {
 	flagSet.DurationVar(&f.ReconcilePeriod,
 		"reconcile-period",
-		time.Minute,
+		0,
 		"Default reconcile period for controllers",
 	)
 	flagSet.StringVar(&f.WatchesFile,
