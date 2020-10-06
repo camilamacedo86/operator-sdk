@@ -21,8 +21,8 @@ import (
 
 	testutils "github.com/operator-framework/operator-sdk/test/utils"
 
-	"github.com/operator-framework/operator-sdk/hack/generate/samples/helm"
-	"github.com/operator-framework/operator-sdk/hack/generate/samples/pkg"
+	"github.com/operator-framework/operator-sdk/hack/generate/samples/internal/helm"
+	"github.com/operator-framework/operator-sdk/hack/generate/samples/internal/pkg"
 	log "github.com/sirupsen/logrus"
 )
 

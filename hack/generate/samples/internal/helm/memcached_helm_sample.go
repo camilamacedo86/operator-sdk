@@ -21,7 +21,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/operator-framework/operator-sdk/hack/generate/samples/pkg"
+	"github.com/operator-framework/operator-sdk/hack/generate/samples/internal/pkg"
 	"github.com/operator-framework/operator-sdk/test/utils"
 )
 
@@ -65,7 +65,7 @@ func (mh *MemcachedHelm) Run() {
 	log.Infof("handling work path to get helm chart mock data")
 	projectPath := strings.Split(current, "operator-sdk/")[0]
 	projectPath = strings.Replace(projectPath, "operator-sdk", "", 1)
-	helmChartPath := filepath.Join(projectPath, "operator-sdk/hack/generate/samples/helm/testdata/memcached-0.0.1.tgz")
+	helmChartPath := filepath.Join(projectPath, "operator-sdk/hack/generate/samples/internal/helm/testdata/memcached-0.0.1.tgz")
 	log.Infof("using the helm chart in: (%v)", helmChartPath)
 
 	err = mh.ctx.CreateAPI(
