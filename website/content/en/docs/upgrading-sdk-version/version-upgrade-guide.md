@@ -1224,8 +1224,9 @@ The core Ansible Kubernetes modules have been moved to the [`community.kubernete
 
 ```yaml
 collections:
-  - community.kubernetes
-  - operator_sdk.util
+  - name: community.kubernetes
+    version: "<1.0.0"
+  - name: operator_sdk.util
 ```
 
 Users should then add the following stages to their `build/Dockerfile`:

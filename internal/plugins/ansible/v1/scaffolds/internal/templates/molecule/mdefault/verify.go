@@ -43,6 +43,7 @@ const verifyTemplate = `---
   gather_facts: no
   collections:
     - community.kubernetes
+	  version: "<1.0.0"
 
   vars:
     ctrl_label: control-plane=controller-manager

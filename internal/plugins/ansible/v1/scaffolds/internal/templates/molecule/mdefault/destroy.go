@@ -43,6 +43,7 @@ const destroyTemplate = `---
   gather_facts: false
   collections:
     - community.kubernetes
+	  version: "<1.0.0"
 
   tasks:
     - import_tasks: kustomize.yml

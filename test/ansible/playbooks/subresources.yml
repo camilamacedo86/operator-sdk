@@ -2,8 +2,9 @@
 - hosts: localhost
   gather_facts: no
   collections:
-    - community.kubernetes
-    - operator_sdk.util
+    - name: community.kubernetes
+      version: "<1.0.0"
+    - name: operator_sdk.util
 
   tasks:
     - name: Deploy busybox pod

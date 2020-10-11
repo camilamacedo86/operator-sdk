@@ -43,6 +43,7 @@ const convergeTemplate = `---
   gather_facts: no
   collections:
     - community.kubernetes
+	  version: "<1.0.0"
 
   tasks:
     - name: Create Namespace

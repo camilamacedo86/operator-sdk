@@ -40,7 +40,7 @@ $ pip3 install openshift
 Finally, install the Kubernetes Collection from ansible-galaxy:
 
 ```bash
-$ ansible-galaxy collection install community.kubernetes
+$ ansible-galaxy collection install community.kubernetes:0.11.0
 ```
 
 Alternatively, if you've already initialized your operator, you may have a
