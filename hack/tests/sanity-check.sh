@@ -11,7 +11,7 @@ go fmt ./...
 go run ./hack/generate/changelog/gen-changelog.go -validate-only
 
 make install
-go run ./hack/generate/samples/generate_all.go
+go run ./hack/generate/samples/generate_testdata.go
 
 # Make sure repo is still in a clean state.
 git diff --exit-code

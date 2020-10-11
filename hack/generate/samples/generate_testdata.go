@@ -27,13 +27,14 @@ import (
 	"github.com/operator-framework/operator-sdk/internal/testutils"
 )
 
-const testdata = "/testdata/"
-
-var (
-	binaryName string
-)
-
 func main() {
+	// testdata is the path where all samples should be generate
+	const testdata = "/testdata/"
+
+	// binaryName allow inform the binary that should be used.
+	// By default it is operator-sdk
+	var binaryName string
+
 	flag.StringVar(&binaryName, "bin", testutils.BinaryName, "Binary path that should be used")
 	flag.Parse()
 
