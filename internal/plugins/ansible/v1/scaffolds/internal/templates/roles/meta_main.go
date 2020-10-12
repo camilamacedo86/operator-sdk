@@ -102,6 +102,7 @@ dependencies: []
   # List your role dependencies here, one per line. Be sure to remove the '[]' above,
   # if you add dependencies to this list.
 collections:
-- operator_sdk.util
-- community.kubernetes
+    - operator_sdk.util
+    - name: community.kubernetes
+      version: 1.0.0
 `

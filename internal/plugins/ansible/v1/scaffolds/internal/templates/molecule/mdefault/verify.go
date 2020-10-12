@@ -42,7 +42,8 @@ const verifyTemplate = `---
   connection: local
   gather_facts: no
   collections:
-    - community.kubernetes
+    - name: community.kubernetes
+      version: 1.0.0
 
   vars:
     ctrl_label: control-plane=controller-manager
