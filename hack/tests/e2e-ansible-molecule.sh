@@ -4,9 +4,7 @@ source hack/lib/common.sh
 source hack/lib/test_lib.sh
 source hack/lib/image_lib.sh
 
-set -o errexit
-set -o nounset
-set -o pipefail
+set -eu
 
 header_text "Running tests to check ansible molecule"
 
