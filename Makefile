@@ -113,7 +113,7 @@ cli-doc: ## Generate CLI documentation
 	./hack/generate/cli-doc/cli-doc.sh
 
 samples: ## Generate samples
-	go run ./hack/generate/samples/generate_all.go
+	go run ./hack/generate/samples/generate_testdata.go
 
 changelog: ## Generate CHANGELOG.md and migration guide updates
 	./hack/generate/changelog/gen-changelog.sh

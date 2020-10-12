@@ -110,3 +110,6 @@ website/public/
 website/resources/
 website/node_modules/
 website/tech-doc-hugo
+
+# Ignore molecule samples testdata if it be generated in the testdata/ diretory
+testdata/ansible/memcached-molecule-operator
