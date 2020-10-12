@@ -3,7 +3,8 @@
   hosts: k8s
   gather_facts: no
   collections:
-    - community.kubernetes
+    - name: community.kubernetes
+      version: 1.0.0
 
   vars:
     image: test.example.com/ansible:testing
@@ -39,7 +40,8 @@
   hosts: localhost
   connection: local
   collections:
-    - community.kubernetes
+    - name: community.kubernetes
+      version: 1.0.0
 
   vars:
     image: test.example.com/ansible:testing
