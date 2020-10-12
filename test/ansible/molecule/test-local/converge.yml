@@ -39,8 +39,7 @@
   hosts: localhost
   connection: local
   collections:
-    - name: community.kubernetes
-      version: 1.0.0
+    - community.kubernetes
 
   vars:
     image: test.example.com/ansible:testing
