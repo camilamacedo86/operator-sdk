@@ -28,11 +28,6 @@ pushd "$TMPDIR"
 popd
 cd $TMPDIR/memcached-molecule-operator
 
-header_text "Running tests to check ansible molecule"
-DEST_IMAGE="quay.io/example/ansible-test-operator:v0.0.1"
-make docker-build IMG=$DEST_IMAGE
-load_image_if_kind "$DEST_IMAGE"
-
 header_text "Test Kind"
 make kustomize
 if [ -f ./bin/kustomize ] ; then
@@ -44,15 +39,13 @@ fi
 KUSTOMIZE_PATH=${KUSTOMIZE}
 KUSTOMIZE_PATH=${KUSTOMIZE} TEST_OPERATOR_NAMESPACE=default molecule test -s kind
 
-#todo(camilamacedo86)
-#popd
-#popd
-#KUSTOMIZE_PATH=${KUSTOMIZE}
-#header_text "Test Ansible Molecule scenarios"
-#pushd "${ROOTDIR}/test/ansible"
-#DEST_IMAGE="quay.io/example/ansible-test-operator:v0.0.1"
-#sed -i".bak" -E -e 's/(FROM quay.io\/operator-framework\/ansible-operator)(:.*)?/\1:dev/g' build/Dockerfile; rm -f build/Dockerfile.bak
-#docker build -f build/Dockerfile -t "$DEST_IMAGE" --no-cache .
-#load_image_if_kind "$DEST_IMAGE"
-#OPERATOR_PULL_POLICY=Never OPERATOR_IMAGE=${DEST_IMAGE} TEST_CLUSTER_PORT=24443 TEST_OPERATOR_NAMESPACE=osdk-test molecule test --all
-#
+cd $TMPDIR
+KUSTOMIZE_PATH=${KUSTOMIZE}
+header_text "Test Ansible Molecule scenarios"
+pushd "${ROOTDIR}/test/ansible"
+DEST_IMAGE="quay.io/example/ansible-test-operator:v0.0.1"
+sed -i".bak" -E -e 's/(FROM quay.io\/operator-framework\/ansible-operator)(:.*)?/\1:dev/g' build/Dockerfile; rm -f build/Dockerfile.bak
+docker build -f build/Dockerfile -t "$DEST_IMAGE" --no-cache .
+load_image_if_kind "$DEST_IMAGE"
+OPERATOR_PULL_POLICY=Never OPERATOR_IMAGE=${DEST_IMAGE} TEST_CLUSTER_PORT=24443 TEST_OPERATOR_NAMESPACE=osdk-test molecule test --all
+
