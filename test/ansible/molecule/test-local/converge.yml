@@ -3,8 +3,7 @@
   hosts: k8s
   gather_facts: no
   collections:
-    - name: community.kubernetes
-      version: 1.0.0
+    - community.kubernetes
 
   vars:
     image: test.example.com/ansible:testing

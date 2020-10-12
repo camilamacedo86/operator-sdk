@@ -4,8 +4,7 @@
   connection: local
   gather_facts: no
   collections:
-    - name: community.kubernetes
-      version: 1.0.0
+    - community.kubernetes
   tasks:
     - block:
       - name: Import all test files from tasks/

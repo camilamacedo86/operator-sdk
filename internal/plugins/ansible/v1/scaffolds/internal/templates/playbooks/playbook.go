@@ -43,8 +43,7 @@ const playbookTmpl = `---
 - hosts: localhost
   gather_facts: no
   collections:
-    - name: community.kubernetes
-      version: 1.0.0
+    - community.kubernetes
     - operator_sdk.util
 
   {{- if .GenerateRole }}
