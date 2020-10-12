@@ -12,7 +12,6 @@
       status: "True"
   vars:
     cr_file: 'cache_v1alpha1_memcached.yaml'
-
 - name: Create the cache.example.com/v1alpha1.Memcached
   k8s:
     state: present
