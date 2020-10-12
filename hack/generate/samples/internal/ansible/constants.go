@@ -213,7 +213,7 @@ const memcachedWithBlackListTask = `
                 initialDelaySeconds: 3
                 periodSeconds: 3
 - operator_sdk.util.k8s_status:
-    api_version: ansible.example.com/v1alpha1
+    api_version: cache.example.com/v1alpha1
     kind: Memcached
     name: "{{ ansible_operator_meta.name }}"
     namespace: "{{ ansible_operator_meta.namespace }}"
@@ -261,7 +261,7 @@ const taskToDeleteConfigMap = `- name: delete configmap for test
 
 const memcachedWatchCustomizations = `playbook: playbooks/memcached.yml
   finalizer:
-    name: finalizer.ansible.example.com
+    name: finalizer.cache.example.com
     role: memfin
   blacklist:
     - group: ""
