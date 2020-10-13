@@ -36,6 +36,10 @@ else
   KUSTOMIZE="$(which kustomize)"
 fi
 
+DEST_IMAGE="quay.io/example/ansible-test-operator:v0.0.1"
+make docker-build IMG="quay.io/example/memcached-molecule-operator:v0.0.1"
+load_image_if_kind "$DEST_IMAGE"
+
 KUSTOMIZE_PATH=${KUSTOMIZE}
 KUSTOMIZE_PATH=${KUSTOMIZE} TEST_OPERATOR_NAMESPACE=default molecule test -s kind
 
