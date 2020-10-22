@@ -78,6 +78,8 @@ else
 HELM_OPERATOR=$(shell which helm-operator)
 endif
 
+//TODO: camila
+
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
 bundle: kustomize
