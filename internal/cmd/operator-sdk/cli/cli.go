@@ -83,7 +83,31 @@ func GetPluginsCLIAndRoot() (cli.CLI, *cobra.Command) {
 	}
 	root.PersistentPreRun = rootPersistentPreRun
 
+	// Hidden commands which are based operator type
+	hiddenCommands(root)
+
 	return c, root
+}
+
+// hiddenCommands will hidden commands based on the operator type
+func hiddenCommands(root *cobra.Command) {
+	if !isGoOperator() {
+		for _, cmd := range root.Commands() {
+			// The edit command is valid only for Go based- operators
+			if cmd.Name() == "edit" {
+				cmd.Hidden = true
+			}
+		}
+	}
+}
+
+// isGoOperator returns true when the cli is called from a Go operator
+func isGoOperator() bool {
+	cfg, err := projutil.ReadConfig()
+	if err == nil && cfg != nil {
+		return projutil.PluginKeyToOperatorType(cfg.Layout) == projutil.OperatorTypeGo
+	}
+	return false
 }
 
 func rootPersistentPreRun(cmd *cobra.Command, args []string) {
