@@ -16,13 +16,13 @@ package main
 
 import (
 	"flag"
+	gosamples "github.com/operator-framework/operator-sdk/hack/generate/samples/internal/go"
 	"os"
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/operator-framework/operator-sdk/hack/generate/samples/internal/ansible"
-	gosamples "github.com/operator-framework/operator-sdk/hack/generate/samples/internal/go"
 	"github.com/operator-framework/operator-sdk/hack/generate/samples/internal/helm"
 	"github.com/operator-framework/operator-sdk/internal/testutils"
 )
@@ -43,8 +43,11 @@ func main() {
 		log.Error(err)
 		os.Exit(1)
 	}
-
 	samplesPath := filepath.Join(currentPath, testdata)
+
+	log.Infof("creating Go Memcached Sample with Webhooks")
+	gosamples.GenerateMemcachedGoWithWebhooksSample(samplesPath)
+
 	log.Infof("using the path: (%v)", samplesPath)
 
 	log.Infof("creating Helm Memcached Sample")
@@ -53,6 +56,4 @@ func main() {
 	log.Infof("creating Ansible Memcached Sample")
 	ansible.GenerateMemcachedAnsibleSample(samplesPath)
 
-	log.Infof("creating Go Memcached Sample with Webhooks")
-	gosamples.GenerateMemcachedGoWithWebhooksSample(samplesPath)
 }

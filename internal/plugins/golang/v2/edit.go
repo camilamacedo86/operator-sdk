@@ -17,26 +17,26 @@ package v2
 import (
 	"github.com/spf13/pflag"
 
-	"sigs.k8s.io/kubebuilder/pkg/model/config"
-	"sigs.k8s.io/kubebuilder/pkg/plugin"
+	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
+	"sigs.k8s.io/kubebuilder/v2/pkg/plugin"
 )
 
-type editPlugin struct {
-	plugin.Edit
+type editSubcommand struct {
+	plugin.EditSubcommand
 
 	config *config.Config
 }
 
-var _ plugin.Edit = &editPlugin{}
+var _ plugin.EditSubcommand = &editSubcommand{}
 
-func (p *editPlugin) UpdateContext(ctx *plugin.Context) { p.Edit.UpdateContext(ctx) }
-func (p *editPlugin) BindFlags(fs *pflag.FlagSet)       { p.Edit.BindFlags(fs) }
+func (p *editSubcommand) UpdateContext(ctx *plugin.Context) { p.UpdateContext(ctx) }
+func (p *editSubcommand) BindFlags(fs *pflag.FlagSet)       { p.BindFlags(fs) }
 
-func (p *editPlugin) InjectConfig(c *config.Config) {
-	p.Edit.InjectConfig(c)
+func (p *editSubcommand) InjectConfig(c *config.Config) {
+	p.InjectConfig(c)
 	p.config = c
 }
 
-func (p *editPlugin) Run() error {
-	return p.Edit.Run()
+func (p *editSubcommand) Run() error {
+	return p.Run()
 }

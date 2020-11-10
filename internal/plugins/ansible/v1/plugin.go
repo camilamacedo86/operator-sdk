@@ -15,8 +15,8 @@
 package ansible
 
 import (
-	"sigs.k8s.io/kubebuilder/pkg/model/config"
-	"sigs.k8s.io/kubebuilder/pkg/plugin"
+	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
+	"sigs.k8s.io/kubebuilder/v2/pkg/plugin"
 
 	"github.com/operator-framework/operator-sdk/internal/plugins"
 )
@@ -29,18 +29,13 @@ var (
 	pluginKey                = plugin.KeyFor(Plugin{})
 )
 
-var (
-	_ plugin.Base             = Plugin{}
-	_ plugin.InitPluginGetter = Plugin{}
-)
-
 type Plugin struct {
-	initPlugin
-	createAPIPlugin
+	initSubcommand
+	createAPISubcommand
 }
 
-func (Plugin) Name() string                           { return pluginName }
-func (Plugin) Version() plugin.Version                { return pluginVersion }
-func (Plugin) SupportedProjectVersions() []string     { return supportedProjectVersions }
-func (p Plugin) GetInitPlugin() plugin.Init           { return &p.initPlugin }
-func (p Plugin) GetCreateAPIPlugin() plugin.CreateAPI { return &p.createAPIPlugin }
+func (Plugin) Name() string                                         { return pluginName }
+func (Plugin) Version() plugin.Version                              { return pluginVersion }
+func (Plugin) SupportedProjectVersions() []string                   { return supportedProjectVersions }
+func (p Plugin) GetInitSubcommand() plugin.InitSubcommand           { return &p.initSubcommand }
+func (p Plugin) GetCreateAPISubcommand() plugin.CreateAPISubcommand { return &p.createAPISubcommand }
