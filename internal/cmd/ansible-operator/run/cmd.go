@@ -144,15 +144,6 @@ func run(cmd *cobra.Command, f *flags.Flags) {
 		os.Exit(1)
 	}
 
-	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
-		log.Error(err, "Unable to set up health check")
-		os.Exit(1)
-	}
-	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
-		log.Error(err, "Unable to set up ready check")
-		os.Exit(1)
-	}
-
 	cMap := controllermap.NewControllerMap()
 	watches, err := watches.Load(f.WatchesFile, f.MaxConcurrentReconciles, f.AnsibleVerbosity)
 	if err != nil {
@@ -186,6 +177,12 @@ func run(cmd *cobra.Command, f *flags.Flags) {
 			OwnerWatchMap:               controllermap.NewWatchMap(),
 			AnnotationWatchMap:          controllermap.NewWatchMap(),
 		}, w.Blacklist)
+	}
+
+	// todo: remove when a upper version be bumped
+	err = mgr.AddHealthzCheck("ping", healthz.Ping)
+	if err != nil {
+		log.Error(err, "Failed to add Healthz check.")
 	}
 
 	done := make(chan error)

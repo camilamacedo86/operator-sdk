@@ -40,3 +40,8 @@ entries:
             initialDelaySeconds: 5
             periodSeconds: 10
         ```
+
+  - description: >
+      For Ansible-based operators, the `/ping` endpoint is deprecated. Use `/healthz` and `/readyz` instead of that.
+    kind: "deprecation"
+    breaking: false
