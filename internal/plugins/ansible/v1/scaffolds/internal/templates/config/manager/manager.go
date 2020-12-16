@@ -78,5 +78,17 @@ spec:
             - name: ANSIBLE_GATHERING
               value: explicit
           image: {{ .Image }}
+          livenessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10		   	
       terminationGracePeriodSeconds: 10
 `
