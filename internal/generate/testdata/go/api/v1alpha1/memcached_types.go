@@ -21,25 +21,25 @@ import (
 // MemcachedSpec defines the desired state of Memcached
 type MemcachedSpec struct {
 	// Size is the size of the memcached deployment
-	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	Size int32 `json:"size"`
 
 	// List of Providers
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Providers"
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Providers"
 	Providers []Provider `json:"providers,omitempty"`
 }
 
 // Provider represents the container for a single provider
 type Provider struct {
 	// Foo represents the Foo provider
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Foo Provider"
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Foo Provider"
 	Foo *FooProvider `json:"foo,omitempty"`
 }
 
 // FooProvider represents integration with Foo
 type FooProvider struct {
 	// CredentialsSecret is a reference to a secret containing authentication details for the Foo server
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Secret Containing the Credentials",xDescriptors="urn:alm:descriptor:io.kubernetes:Secret"
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Secret Containing the Credentials",xDescriptors="urn:alm:descriptor:io.kubernetes:Secret"
 	// +kubebuilder:validation:Required
 	CredentialsSecret *SecretRef `json:"credentialsSecret"`
 }
@@ -47,22 +47,22 @@ type FooProvider struct {
 // SecretRef represents a reference to an item within a Secret
 type SecretRef struct {
 	// Name represents the name of the secret
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Name of the secret",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:text"}
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Name of the secret",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:text"}
 	Name string `json:"name"`
 
 	// Namespace represents the namespace containing the secret
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Namespace containing the secret",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:text"}
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Namespace containing the secret",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:text"}
 	Namespace string `json:"namespace"`
 
 	// Key represents the specific key to reference from the secret
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Key within the secret",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:text"}
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Key within the secret",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:advanced","urn:alm:descriptor:com.tectonic.ui:text"}
 	Key string `json:"key,omitempty"`
 }
 
 // MemcachedStatus defines the observed state of Memcached
 type MemcachedStatus struct {
 	// Nodes are the names of the memcached pods
-	// +operator-sdk:csv:customresourcedefinitions:type=status
+	//+operator-sdk:csv:customresourcedefinitions:type=status
 	Nodes []string `json:"nodes"`
 }
 
@@ -72,7 +72,7 @@ type MemcachedStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=memcacheds,scope=Namespaced
 // +kubebuilder:storageversion
-// +operator-sdk:csv:customresourcedefinitions:displayName="Memcached App Display Name"
+//+operator-sdk:csv:customresourcedefinitions:displayName="Memcached App Display Name"
 type Memcached struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -19,9 +19,10 @@ import (
 	"strings"
 
 	"github.com/spf13/pflag"
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/resource"
-	"sigs.k8s.io/kubebuilder/v2/pkg/plugin"
+	"sigs.k8s.io/kubebuilder/v3/pkg/config"
+	"sigs.k8s.io/kubebuilder/v3/pkg/model/resource"
+	"sigs.k8s.io/kubebuilder/v3/pkg/plugin"
+	"sigs.k8s.io/kubebuilder/v3/pkg/plugins/golang"
 
 	"github.com/operator-framework/operator-sdk/internal/kubebuilder/cmdutil"
 	"github.com/operator-framework/operator-sdk/internal/plugins/ansible/v1/scaffolds"
@@ -39,7 +40,8 @@ const (
 )
 
 type createAPIPSubcommand struct {
-	config        *config.Config
+	config        config.Config
+	options       *golang.Options
 	createOptions scaffolds.CreateOptions
 }
 
@@ -90,7 +92,9 @@ func (p *createAPIPSubcommand) UpdateContext(ctx *plugin.Context) {
 
 func (p *createAPIPSubcommand) BindFlags(fs *pflag.FlagSet) {
 	fs.SortFlags = false
-
+	if p.options == nil {
+		p.options = &golang.Options{}
+	}
 	fs.StringVar(&p.createOptions.GVK.Group, groupFlag, "", "resource group")
 	fs.StringVar(&p.createOptions.GVK.Version, versionFlag, "", "resource version")
 	fs.StringVar(&p.createOptions.GVK.Kind, kindFlag, "", "resource kind")
@@ -99,7 +103,7 @@ func (p *createAPIPSubcommand) BindFlags(fs *pflag.FlagSet) {
 	fs.BoolVarP(&p.createOptions.GenerateRole, "generate-role", "", false, "Generate an Ansible role skeleton.")
 }
 
-func (p *createAPIPSubcommand) InjectConfig(c *config.Config) {
+func (p *createAPIPSubcommand) InjectConfig(c config.Config) {
 	p.config = c
 }
 
@@ -119,7 +123,7 @@ func (p *createAPIPSubcommand) Run() error {
 // SDK phase 2 plugins.
 func (p *createAPIPSubcommand) runPhase2() error {
 	gvk := p.createOptions.GVK
-	return manifests.RunCreateAPI(p.config, config.GVK{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
+	return manifests.RunCreateAPI(p.config, resource.GVK{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
 }
 
 func (p *createAPIPSubcommand) Validate() error {
@@ -137,14 +141,13 @@ func (p *createAPIPSubcommand) Validate() error {
 		return fmt.Errorf("value of --%s must not have empty value", kindFlag)
 	}
 
-	// Validate the resource.
-	r := resource.Options{
-		Namespaced: true,
-		Group:      p.createOptions.GVK.Group,
-		Version:    p.createOptions.GVK.Version,
-		Kind:       p.createOptions.GVK.Kind,
-	}
-	if err := r.Validate(); err != nil {
+	p.options.Namespaced = true
+	p.options.Domain = p.config.GetDomain()
+	p.options.Group = p.createOptions.GVK.Group
+	p.options.Version = p.createOptions.GVK.Version
+	p.options.Kind = p.createOptions.GVK.Kind
+
+	if err := p.options.Validate(); err != nil {
 		return err
 	}
 

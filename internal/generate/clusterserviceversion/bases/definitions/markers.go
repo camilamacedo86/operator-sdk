@@ -37,10 +37,10 @@ const (
 	crdMarkerName = csvPrefix + ":customresourcedefinitions"
 )
 
-// +operator-sdk:csv:customresourcedefinitions:displayName="string",resources={ {kind,version,name} , ... }
+//+operator-sdk:csv:customresourcedefinitions:displayName="string",resources={ {kind,version,name} , ... }
 var typeDefinition = markers.Must(markers.MakeDefinition(crdMarkerName, markers.DescribesType, Description{}))
 
-// +operator-sdk:csv:customresourcedefinitions:type=<spec|status>,displayName="name",xDescriptors="ui:elements:foo:bar"
+//+operator-sdk:csv:customresourcedefinitions:type=<spec|status>,displayName="name",xDescriptors="ui:elements:foo:bar"
 var fieldDefinition = markers.Must(markers.MakeDefinition(crdMarkerName, markers.DescribesField, Descriptor{}))
 
 // See https://github.com/kubernetes-sigs/controller-tools/blob/92e95c1/pkg/crd/markers/crd.go#L40

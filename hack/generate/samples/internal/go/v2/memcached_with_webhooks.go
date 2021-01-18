@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	kbtestutils "sigs.k8s.io/kubebuilder/v2/test/e2e/utils"
+	kbtestutils "sigs.k8s.io/kubebuilder/v3/test/e2e/utils"
 
 	"github.com/operator-framework/operator-sdk/hack/generate/samples/internal/pkg"
 	"github.com/operator-framework/operator-sdk/internal/testutils"
@@ -278,9 +278,9 @@ func GenerateMemcachedGoWithWebhooksSample(samplesPath string) {
 }
 
 const rbacFragment = `
-// +kubebuilder:rbac:groups=cache.example.com,resources=memcacheds/finalizers,verbs=update
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;`
+//+kubebuilder:rbac:groups=cache.example.com,resources=memcacheds/finalizers,verbs=update
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;`
 
 const reconcileFragment = `// Fetch the Memcached instance
 	memcached := &cachev1alpha1.Memcached{}

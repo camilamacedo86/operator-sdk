@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
+	"sigs.k8s.io/kubebuilder/v3/pkg/config"
 )
 
 const (
@@ -60,14 +60,14 @@ func (tc TestContext) AddPackagemanifestsTarget() error {
 	if err != nil {
 		return err
 	}
-	c := &config.Config{}
+	var c config.Config
 	if err = c.Unmarshal(b); err != nil {
 		return err
 	}
 
 	// add the manifests target when is a Go project.
 	replaceTarget := ""
-	if strings.HasPrefix(c.Layout, "go") {
+	if strings.HasPrefix(c.GetLayout(), "go") {
 		replaceTarget = "manifests"
 	}
 	makefilePackagemanifestsFragment = fmt.Sprintf(makefilePackagemanifestsFragment, replaceTarget)

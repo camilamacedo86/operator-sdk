@@ -28,12 +28,13 @@ import (
 	golangv3 "github.com/operator-framework/operator-sdk/internal/plugins/golang/v3"
 	helmv1 "github.com/operator-framework/operator-sdk/internal/plugins/helm/v1"
 	"github.com/operator-framework/operator-sdk/internal/util/projutil"
+	cfgv2 "sigs.k8s.io/kubebuilder/v3/pkg/config/v2"
+	cfgv3alpha "sigs.k8s.io/kubebuilder/v3/pkg/config/v3alpha"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"sigs.k8s.io/kubebuilder/v2/pkg/cli"
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
+	"sigs.k8s.io/kubebuilder/v3/pkg/cli"
 )
 
 var commands = []*cobra.Command{
@@ -58,15 +59,15 @@ func GetPluginsCLIAndRoot() (cli.CLI, *cobra.Command) {
 	c, err := cli.New(
 		cli.WithCommandName("operator-sdk"),
 		cli.WithVersion(makeVersionString()),
-		cli.WithDefaultProjectVersion(config.Version3Alpha),
+		cli.WithDefaultProjectVersion(cfgv3alpha.Version),
 		cli.WithPlugins(
 			&golangv2.Plugin{},
 			&golangv3.Plugin{},
 			&helmv1.Plugin{},
 			&ansiblev1.Plugin{},
 		),
-		cli.WithDefaultPlugins(config.Version2, &golangv2.Plugin{}),
-		cli.WithDefaultPlugins(config.Version3Alpha, &golangv3.Plugin{}),
+		cli.WithDefaultPlugins(cfgv2.Version, &golangv2.Plugin{}),
+		cli.WithDefaultPlugins(cfgv3alpha.Version, &golangv3.Plugin{}),
 		cli.WithExtraCommands(commands...),
 	)
 	if err != nil {

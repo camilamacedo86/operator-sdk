@@ -16,13 +16,15 @@ package projutil
 
 import (
 	"fmt"
+	"github.com/ghodss/yaml"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
+	"sigs.k8s.io/kubebuilder/v3/pkg/config"
+	cfgv3alpha "sigs.k8s.io/kubebuilder/v3/pkg/config/v3alpha"
 )
 
 const (
@@ -78,17 +80,33 @@ func HasProjectFile() bool {
 	return true
 }
 
+type versionedConfig struct {
+	Version config.Version
+}
+
 // ReadConfig returns a configuration if a file containing one exists at the
 // default path (project root).
-func ReadConfig() (*config.Config, error) {
+func ReadConfig() (config.Config, error) {
 	b, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		return nil, err
 	}
-	c := &config.Config{}
-	if err = c.Unmarshal(b); err != nil {
+	var versioned versionedConfig
+	if err := yaml.Unmarshal(b, &versioned); err != nil {
 		return nil, err
 	}
+	// Create the config object
+	var c config.Config
+	c, err = config.New(versioned.Version)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal the file content
+	if err := c.Unmarshal(b); err != nil {
+		return nil, err
+	}
+
 	return c, nil
 }
 
@@ -108,11 +126,12 @@ func PluginKeyToOperatorType(pluginKey string) OperatorType {
 
 // GetProjectLayout returns the `layout` field in PROJECT file that is v3.
 // If not, it will return "go" because that was the only project type supported for project versions < v3.
-func GetProjectLayout(cfg *config.Config) string {
-	if cfg == nil || !cfg.IsV3() || cfg.Layout == "" {
+func GetProjectLayout(cfg config.Config) string {
+	isV3 := cfg.GetVersion().Compare(cfgv3alpha.Version) >= 0
+	if cfg == nil || !isV3 || cfg.GetLayout() == "" {
 		return "go"
 	}
-	return cfg.Layout
+	return cfg.GetLayout()
 }
 
 var flagRe = regexp.MustCompile("(.* )?-v(.* )?")

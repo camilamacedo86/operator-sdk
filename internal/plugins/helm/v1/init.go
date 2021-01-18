@@ -18,29 +18,31 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sigs.k8s.io/kubebuilder/v3/pkg/plugins/golang"
 	"strings"
-
-	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/util/validation"
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
-	"sigs.k8s.io/kubebuilder/v2/pkg/plugin"
 
 	"github.com/operator-framework/operator-sdk/internal/kubebuilder/cmdutil"
 	"github.com/operator-framework/operator-sdk/internal/plugins/helm/v1/chartutil"
 	"github.com/operator-framework/operator-sdk/internal/plugins/helm/v1/scaffolds"
 	"github.com/operator-framework/operator-sdk/internal/plugins/manifests"
 	"github.com/operator-framework/operator-sdk/internal/plugins/scorecard"
+	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/util/validation"
+	"sigs.k8s.io/kubebuilder/v3/pkg/config"
+	"sigs.k8s.io/kubebuilder/v3/pkg/plugin"
 )
 
 type initSubcommand struct {
-	config    *config.Config
+	config    config.Config
+	options   *golang.Options
 	apiPlugin createAPISubcommand
-
-	// If true, run the `create api` plugin.
-	doCreateAPI bool
 
 	// For help text.
 	commandName string
+
+	// Flags
+	projectName string
+	domain      string
 }
 
 var (
@@ -118,15 +120,16 @@ Writes the following files:
 // BindFlags will set the flags for the plugin
 func (p *initSubcommand) BindFlags(fs *pflag.FlagSet) {
 	fs.SortFlags = false
-	fs.StringVar(&p.config.Domain, "domain", "my.domain", "domain for groups")
-	fs.StringVar(&p.config.ProjectName, "project-name", "", "name of this project, the default being directory name")
+	p.options = &golang.Options{}
+	fs.StringVar(&p.options.Domain, "domain", "my.domain", "domain for groups")
+	fs.StringVar(&p.projectName, "project-name", "", "name of this project, the default being directory name")
 	p.apiPlugin.BindFlags(fs)
 }
 
 // InjectConfig will inject the PROJECT file/config in the plugin
-func (p *initSubcommand) InjectConfig(c *config.Config) {
+func (p *initSubcommand) InjectConfig(c config.Config) {
 	// v3 project configs get a 'layout' value.
-	c.Layout = pluginKey
+	c.SetLayout(pluginKey)
 	p.config = c
 	p.apiPlugin.config = p.config
 }
@@ -154,7 +157,7 @@ func (p *initSubcommand) runPhase2() error {
 		return err
 	}
 
-	if p.doCreateAPI {
+	if p.options.DoAPI {
 		if err := p.apiPlugin.runPhase2(); err != nil {
 			return err
 		}
@@ -165,22 +168,26 @@ func (p *initSubcommand) runPhase2() error {
 
 // Validate perform the required validations for this plugin
 func (p *initSubcommand) Validate() error {
+	// Set values in the config
+	p.config.SetProjectName(p.projectName)
+	p.config.SetDomain(p.options.Domain)
 
 	// Check if the project name is a valid k8s namespace (DNS 1123 label).
-	if p.config.ProjectName == "" {
+	if p.config.GetProjectName() == "" {
 		dir, err := os.Getwd()
 		if err != nil {
 			return fmt.Errorf("error getting current directory: %v", err)
 		}
-		p.config.ProjectName = strings.ToLower(filepath.Base(dir))
+		p.config.SetProjectName(strings.ToLower(filepath.Base(dir)))
 	}
-	if err := validation.IsDNS1123Label(p.config.ProjectName); err != nil {
-		return fmt.Errorf("project name (%s) is invalid: %v", p.config.ProjectName, err)
+
+	if err := validation.IsDNS1123Label(p.config.GetProjectName()); err != nil {
+		return fmt.Errorf("project name (%s) is invalid: %v", p.config.GetProjectName(), err)
 	}
 
 	defaultOpts := chartutil.CreateOptions{CRDVersion: "v1"}
 	if !p.apiPlugin.createOptions.GVK.Empty() || p.apiPlugin.createOptions != defaultOpts {
-		p.doCreateAPI = true
+		p.options.DoAPI = true
 		return p.apiPlugin.Validate()
 	}
 
@@ -193,7 +200,7 @@ func (p *initSubcommand) GetScaffolder() (cmdutil.Scaffolder, error) {
 		apiScaffolder cmdutil.Scaffolder
 		err           error
 	)
-	if p.doCreateAPI {
+	if p.options.DoAPI {
 		apiScaffolder, err = p.apiPlugin.GetScaffolder()
 		if err != nil {
 			return nil, err
@@ -205,7 +212,7 @@ func (p *initSubcommand) GetScaffolder() (cmdutil.Scaffolder, error) {
 // PostScaffold will run the required actions after the default plugin scaffold
 func (p *initSubcommand) PostScaffold() error {
 
-	if p.doCreateAPI {
+	if p.options.DoAPI {
 		return p.apiPlugin.PostScaffold()
 	}
 

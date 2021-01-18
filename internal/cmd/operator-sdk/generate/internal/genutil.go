@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	cfgv2 "sigs.k8s.io/kubebuilder/v3/pkg/config/v2"
 	"strings"
 
 	"github.com/blang/semver/v4"
@@ -171,17 +172,17 @@ func GetPackageNameAndLayout(defaultPackageName string) (packageName string, lay
 		}
 		if packageName == "" {
 			switch {
-			case cfg.IsV2():
+			case cfg.GetVersion().Compare(cfgv2.Version) >= 0:
 				wd, err := os.Getwd()
 				if err != nil {
 					return "", "", err
 				}
 				packageName = strings.ToLower(filepath.Base(wd))
 			default:
-				if cfg.ProjectName == "" {
+				if cfg.GetProjectName() == "" {
 					return "", "", errors.New("--package-name must be set if \"projectName\" is not set in the PROJECT config file")
 				}
-				packageName = cfg.ProjectName
+				packageName = cfg.GetProjectName()
 			}
 		}
 		layout = projutil.GetProjectLayout(cfg)

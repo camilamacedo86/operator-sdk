@@ -20,18 +20,20 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	cfgv3alpha "sigs.k8s.io/kubebuilder/v3/pkg/config/v3alpha"
 	"strings"
 
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
+	"sigs.k8s.io/kubebuilder/v3/pkg/config"
 )
 
 // controllerRuntimeVersion version to be used to download the envtest setup script
 const controllerRuntimeVersion = "v0.6.3"
 
 // RunInit modifies the project scaffolded by kubebuilder's Init plugin.
-func RunInit(cfg *config.Config) error {
+func RunInit(cfg config.Config) error {
 	// Only run these if project version is v3.
-	if !cfg.IsV3() {
+	isV3 := cfg.GetVersion().Compare(cfgv3alpha.Version) >= 0
+	if !isV3 {
 		return nil
 	}
 

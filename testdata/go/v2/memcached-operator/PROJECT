@@ -1,11 +1,13 @@
 domain: example.com
 layout: go.kubebuilder.io/v2
+plugins:
+  go.sdk.operatorframework.io/v2-alpha: {}
 projectName: memcached-operator
 repo: github.com/example/memcached-operator
 resources:
-- group: cache
+- api:
+    crdVersion: v1beta1
+  group: cache
   kind: Memcached
   version: v1alpha1
 version: 3-alpha
-plugins:
-  go.sdk.operatorframework.io/v2-alpha: {}

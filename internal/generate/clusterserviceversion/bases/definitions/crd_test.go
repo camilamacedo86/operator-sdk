@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"sigs.k8s.io/controller-tools/pkg/markers"
-	"sigs.k8s.io/kubebuilder/v2/test/e2e/utils"
+	"sigs.k8s.io/kubebuilder/v3/test/e2e/utils"
 )
 
 var _ = Describe("getTypedDescriptors", func() {

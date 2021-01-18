@@ -16,10 +16,12 @@ package v2
 
 import (
 	"fmt"
+	cfgv3alpha "sigs.k8s.io/kubebuilder/v3/pkg/config/v3alpha"
 
 	"github.com/spf13/pflag"
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
-	"sigs.k8s.io/kubebuilder/v2/pkg/plugin"
+
+	"sigs.k8s.io/kubebuilder/v3/pkg/config"
+	"sigs.k8s.io/kubebuilder/v3/pkg/plugin"
 
 	"github.com/operator-framework/operator-sdk/internal/plugins/envtest"
 	"github.com/operator-framework/operator-sdk/internal/plugins/manifests"
@@ -29,7 +31,7 @@ import (
 type initSubcommand struct {
 	plugin.InitSubcommand
 
-	config *config.Config
+	config config.Config
 }
 
 var _ plugin.InitSubcommand = &initSubcommand{}
@@ -37,7 +39,7 @@ var _ plugin.InitSubcommand = &initSubcommand{}
 func (p *initSubcommand) UpdateContext(ctx *plugin.Context) { p.InitSubcommand.UpdateContext(ctx) }
 func (p *initSubcommand) BindFlags(fs *pflag.FlagSet)       { p.InitSubcommand.BindFlags(fs) }
 
-func (p *initSubcommand) InjectConfig(c *config.Config) {
+func (p *initSubcommand) InjectConfig(c config.Config) {
 	p.InitSubcommand.InjectConfig(c)
 	p.config = c
 }
@@ -53,7 +55,7 @@ func (p *initSubcommand) Run() error {
 	}
 
 	// Update plugin config section with this plugin's configuration for v3 projects.
-	if p.config.IsV3() {
+	if p.config.GetVersion().Compare(cfgv3alpha.Version) >= 0 {
 		cfg := Config{}
 		if err := p.config.EncodePluginConfig(pluginConfigKey, cfg); err != nil {
 			return fmt.Errorf("error writing plugin config for %s: %v", pluginConfigKey, err)

@@ -14,16 +14,20 @@
 
 package v2
 
-import "sigs.k8s.io/kubebuilder/v2/pkg/model/config"
+import (
+	"sigs.k8s.io/kubebuilder/v3/pkg/config"
+	cfgv3alpha "sigs.k8s.io/kubebuilder/v3/pkg/config/v3alpha"
+)
 
 // Config configures this plugin, and is saved in the project config file.
 type Config struct{}
 
-// hasPluginConfig returns true if cfg.Plugins contains an exact match for this plugin's key.
-func hasPluginConfig(cfg *config.Config) bool {
-	if !cfg.IsV3() || len(cfg.Plugins) == 0 {
+// hasPluginConfig returns true if cfg.Layout contains an exact match for this plugin's key.
+func hasPluginConfig(cfg config.Config) bool {
+	isV3 := cfg.GetVersion().Compare(cfgv3alpha.Version) >= 0
+	if !isV3 {
 		return false
 	}
-	_, hasKey := cfg.Plugins[pluginConfigKey]
-	return hasKey
+	var info struct{}
+	return cfg.DecodePluginConfig(pluginConfigKey, &info) == nil
 }

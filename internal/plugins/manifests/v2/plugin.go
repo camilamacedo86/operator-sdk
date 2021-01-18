@@ -17,11 +17,14 @@ package v2
 import (
 	"fmt"
 
+	cfgv3alpha "sigs.k8s.io/kubebuilder/v3/pkg/config/v3alpha"
+	"sigs.k8s.io/kubebuilder/v3/pkg/model/resource"
+
 	"github.com/operator-framework/operator-sdk/internal/plugins"
 	"github.com/operator-framework/operator-sdk/internal/plugins/manifests"
 
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
-	"sigs.k8s.io/kubebuilder/v2/pkg/plugin"
+	"sigs.k8s.io/kubebuilder/v3/pkg/config"
+	"sigs.k8s.io/kubebuilder/v3/pkg/plugin"
 )
 
 const (
@@ -36,17 +39,18 @@ var (
 // Config configures this plugin, and is saved in the project config file.
 type Config struct{}
 
-// hasPluginConfig returns true if cfg.Plugins contains an exact match for this plugin's key.
-func hasPluginConfig(cfg *config.Config) bool {
-	if !cfg.IsV3() || len(cfg.Plugins) == 0 {
+// hasPluginConfig returns true if cfg.Layout contains an exact match for this plugin's key.
+func hasPluginConfig(cfg config.Config) bool {
+	isV3 := cfg.GetVersion().Compare(cfgv3alpha.Version) >= 0
+	if !isV3 {
 		return false
 	}
-	_, hasKey := cfg.Plugins[pluginConfigKey]
-	return hasKey
+	var info struct{}
+	return cfg.DecodePluginConfig(pluginConfigKey, &info) == nil
 }
 
 // RunInit modifies the project scaffolded by kubebuilder's Init plugin.
-func RunInit(cfg *config.Config) error {
+func RunInit(cfg config.Config) error {
 	// Only run these if project version is v3.
 	if err := manifests.RunInit(cfg); err != nil {
 		return err
@@ -62,7 +66,7 @@ func RunInit(cfg *config.Config) error {
 }
 
 // RunCreateAPI runs the manifests SDK phase 2 plugin.
-func RunCreateAPI(cfg *config.Config, gvk config.GVK) error {
+func RunCreateAPI(cfg config.Config, gvk resource.GVK) error {
 	if !hasPluginConfig(cfg) {
 		return nil
 	}

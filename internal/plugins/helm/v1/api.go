@@ -19,9 +19,10 @@ import (
 	"strings"
 
 	"github.com/spf13/pflag"
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/resource"
-	"sigs.k8s.io/kubebuilder/v2/pkg/plugin"
+	"sigs.k8s.io/kubebuilder/v3/pkg/config"
+	"sigs.k8s.io/kubebuilder/v3/pkg/model/resource"
+	"sigs.k8s.io/kubebuilder/v3/pkg/plugin"
+	"sigs.k8s.io/kubebuilder/v3/pkg/plugins/golang"
 
 	"github.com/operator-framework/operator-sdk/internal/kubebuilder/cmdutil"
 	"github.com/operator-framework/operator-sdk/internal/plugins/helm/v1/chartutil"
@@ -30,8 +31,8 @@ import (
 )
 
 type createAPISubcommand struct {
-	config *config.Config
-
+	config        config.Config
+	options       *golang.Options
 	createOptions chartutil.CreateOptions
 }
 
@@ -102,6 +103,9 @@ const (
 // BindFlags will set the flags for the plugin
 func (p *createAPISubcommand) BindFlags(fs *pflag.FlagSet) {
 	p.createOptions = chartutil.CreateOptions{}
+	if p.options == nil {
+		p.options = &golang.Options{}
+	}
 	fs.SortFlags = false
 
 	fs.StringVar(&p.createOptions.GVK.Group, groupFlag, "", "resource group")
@@ -116,7 +120,7 @@ func (p *createAPISubcommand) BindFlags(fs *pflag.FlagSet) {
 }
 
 // InjectConfig will inject the PROJECT file/config in the plugin
-func (p *createAPISubcommand) InjectConfig(c *config.Config) {
+func (p *createAPISubcommand) InjectConfig(c config.Config) {
 	p.config = c
 }
 
@@ -137,7 +141,7 @@ func (p *createAPISubcommand) Run() error {
 // SDK phase 2 plugins.
 func (p *createAPISubcommand) runPhase2() error {
 	gvk := p.createOptions.GVK
-	return manifests.RunCreateAPI(p.config, config.GVK{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
+	return manifests.RunCreateAPI(p.config, resource.GVK{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
 }
 
 // Validate perform the required validations for this plugin
@@ -165,14 +169,13 @@ func (p *createAPISubcommand) Validate() error {
 			return fmt.Errorf("value of --%s must not have empty value", kindFlag)
 		}
 
-		// Validate the resource.
-		r := resource.Options{
-			Namespaced: true,
-			Group:      p.createOptions.GVK.Group,
-			Version:    p.createOptions.GVK.Version,
-			Kind:       p.createOptions.GVK.Kind,
-		}
-		if err := r.Validate(); err != nil {
+		p.options.Namespaced = true
+		p.options.Domain = p.config.GetDomain()
+		p.options.Group = p.createOptions.GVK.Group
+		p.options.Version = p.createOptions.GVK.Version
+		p.options.Kind = p.createOptions.GVK.Kind
+
+		if err := p.options.Validate(); err != nil {
 			return err
 		}
 	}
