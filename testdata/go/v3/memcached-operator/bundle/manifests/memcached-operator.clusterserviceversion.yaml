@@ -16,6 +16,9 @@ metadata:
         }
       ]
     capabilities: Basic Install
+    olm.properties: '[{"type": "olm.maxOpenShiftVersion", "value": "4.8"}]'
+    operators.operatorframework.io/builder: operator-sdk-v2.0.0+git
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
   name: memcached-operator.v0.0.1
   namespace: placeholder
 spec:
@@ -126,7 +129,7 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
-                image: quay.io/example/memcached-operator:v0.0.1
+                image: controller:latest
                 livenessProbe:
                   httpGet:
                     path: /healthz
